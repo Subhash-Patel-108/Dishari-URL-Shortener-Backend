@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: SnapUrlBackend
+  profiles:
+    active: ${SPRING_PROFILE_ACTIVATE:dev}

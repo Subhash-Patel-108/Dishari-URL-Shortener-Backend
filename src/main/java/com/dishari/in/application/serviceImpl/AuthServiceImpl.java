@@ -1,0 +1,338 @@
+package com.dishari.in.application.serviceImpl;
+
+import com.dishari.in.application.service.AuthService;
+import com.dishari.in.domain.entity.RefreshToken;
+import com.dishari.in.domain.entity.User;
+import com.dishari.in.domain.enums.SocialProvider;
+import com.dishari.in.domain.enums.UserStatus;
+import com.dishari.in.domain.repository.RefreshTokenRepository;
+import com.dishari.in.domain.repository.UserRepository;
+import com.dishari.in.exception.*;
+import com.dishari.in.infrastructure.cache.EmailVerificationCacheService;
+import com.dishari.in.infrastructure.email.EmailService;
+import com.dishari.in.utils.CookiesUtils;
+import com.dishari.in.utils.IPUtils;
+import com.dishari.in.utils.JwtUtils;
+import com.dishari.in.web.dto.request.UserLoginRequest;
+import com.dishari.in.web.dto.request.UserRegistrationRequest;
+import com.dishari.in.web.dto.response.LoginResponse;
+import com.dishari.in.web.dto.response.MessageResponse;
+import com.dishari.in.web.dto.response.RefreshTokenResponse;
+import io.jsonwebtoken.JwtException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class AuthServiceImpl implements AuthService {
+
+    private final UserRepository userRepository ;
+    private final PasswordEncoder passwordEncoder ;
+    private final AuthenticationManager authenticationManager ;
+    private final JwtUtils jwtUtils ;
+    private final RefreshTokenRepository refreshTokenRepository ;
+    private final CookiesUtils cookiesUtils ;
+    private final EmailVerificationCacheService emailVerificationCacheService ;
+    private final EmailService emailService ;
+
+    @Override // Method for user registration
+    @Transactional
+    public MessageResponse userRegistration(UserRegistrationRequest request) {
+
+        String email = request.getEmail() ;
+        //First we check that the email should not be registered
+        if (userRepository.existsByEmail(email)) {
+            throw new EmailAlreadyExistException("Email is already registered.") ;
+        }
+
+        //Building user from request
+        User user = buildUserFromRegistrationRequest(request) ;
+
+        userRepository.save(user) ;
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                //We get the token from email verification cache service
+                String token = emailVerificationCacheService.generateAndStoreToken(user.getId().toString());
+
+                //Now send the mail
+                emailService.sendVerificationEmail(user.getEmail(), user.getName(), token);
+                return ;
+            }
+        });
+
+        return MessageResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message("Verification link has been sent to your email.")
+                .timestamp(Instant.now())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public LoginResponse login(HttpServletRequest servletRequest, HttpServletResponse servletResponse, UserLoginRequest request) {
+        //1. fetch the user by email
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BadCredentialsException("Invalid Email or Password"));
+
+        //2. check provider type (if social provider then user can't log in with password )
+        if (user.getSocialProvider() != SocialProvider.LOCAL) {
+            throw new SocialLoginRequiredException(
+                    "This account uses " + user.getSocialProvider() + " login.");
+        }
+
+        //3. checking if the user is enabled or not
+        if (!user.isEnabled()) {
+            throw new EmailNotVerifiedException("Email is not verified") ;
+        }
+        if (user.isFrozen()) {
+            throw new LockedException("Account is frozen. Contact support.");
+        }
+        if (!user.isVerified()) {
+            throw new EmailNotVerifiedException("Email is not verified");
+        }
+
+        // Manually verify password — skip authenticationManager's DB lookup
+        if (!passwordEncoder.matches(request.getPassword(), user.getHashedPassword())) {
+            throw new BadCredentialsException("Invalid Email or Password");
+        }
+
+        //5. Create an entry for refresh token
+        String refreshTokenJti = UUID.randomUUID().toString() ;
+        RefreshToken refreshTokenObj = buildRefreshToken(user , refreshTokenJti , servletRequest) ;
+        refreshTokenRepository.save(refreshTokenObj) ;
+
+        //6. generate refresh and access token
+        String refreshToken = jwtUtils.generateRefreshToken(user , refreshTokenJti) ;
+        String accessToken = jwtUtils.generateAccessToken(user) ;
+
+        //7. set the refresh token to the HTTP only cookies
+        cookiesUtils.attachRefreshTokenCookie(servletResponse , refreshToken);
+        cookiesUtils.addNoStoreHeader(servletResponse);
+
+        return  LoginResponse.fromEntity(accessToken , jwtUtils.getJwtAccessTokenExpirationInMS(),  user) ;
+    }
+
+    @Override
+    @Transactional
+    public RefreshTokenResponse refresh(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+        //1. fetch the refresh token from cookies
+        Optional<String> refreshTokenOptional = cookiesUtils.extractRefreshTokenFromCookiesOrRequestBody(servletRequest) ;
+
+        //2. check if the refresh token is present
+        if (refreshTokenOptional.isEmpty()) {
+            throw new RefreshTokenNotFoundException("Refresh token is not present");
+        }
+
+        String cookieRefreshToken = refreshTokenOptional.get() ;
+
+        //Now check the token type
+        if (!jwtUtils.isRefreshToken(cookieRefreshToken)) {
+            throw new RefreshTokenNotFoundException("Invalid refresh token.") ;
+        }
+
+        String tokenId = jwtUtils.extractJti(cookieRefreshToken) ;
+        RefreshToken refreshTokenObj = refreshTokenRepository.findByTokenId(tokenId)
+                .orElseThrow(() -> new RefreshTokenNotFoundException("Invalid refresh token."));
+        User tokenUser = refreshTokenObj.getUser() ;
+
+        //The permission to use this token is revoked or not
+        //TODO: Reuse Detection (The "Nuclear" Option)
+        if (refreshTokenObj.isRevoked()) {
+            revokeAllRefreshToken(tokenUser) ;
+            cookiesUtils.clearRefreshTokenCookieFromHeader(servletResponse);
+
+            //Logging the event
+            log.warn("Reuse Detection : User ID : {} , IP Address : {}", tokenUser.getId() , IPUtils.extractIpAddress(servletRequest) );
+            throw new RefreshTokenNotFoundException("Security Alert: This session has been invalidated.") ;
+        }
+
+        //Checking the expiration of the token
+        if (refreshTokenObj.getExpiresAt().isBefore(Instant.now())) {
+            refreshTokenObj.setRevoked(true);
+            refreshTokenRepository.save(refreshTokenObj);
+            cookiesUtils.clearRefreshTokenCookieFromHeader(servletResponse);
+            throw new RefreshTokenNotFoundException("Refresh token expired.");
+        }
+
+        //TODO: IP county matching for security
+
+        //Now, we rotate the refresh token
+        String newJti = UUID.randomUUID().toString() ;
+        refreshTokenObj.setRevoked(true);
+        refreshTokenObj.setRotateToTokenId(newJti);
+
+        //Generate new Access and Refresh Token
+        String newAccessToken = jwtUtils.generateAccessToken(tokenUser) ;
+        String newRefreshToken = jwtUtils.generateRefreshToken(tokenUser , newJti) ;
+
+        //Extract user from refresh token object and build new refresh token entry and save it into the DB
+        User refreshTokenUser = refreshTokenObj.getUser() ;
+        RefreshToken newRefreshTokenObj = buildRefreshToken(refreshTokenUser , newJti , servletRequest) ;
+        refreshTokenRepository.save(newRefreshTokenObj) ;
+
+        //Add refresh token to the cookies
+        cookiesUtils.attachRefreshTokenCookie(servletResponse , newRefreshToken);
+        cookiesUtils.addNoStoreHeader(servletResponse);
+
+        return RefreshTokenResponse.builder()
+                .accessToken(newAccessToken)
+                .accessTokenExpiration(jwtUtils.getJwtAccessTokenExpirationInMS())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public MessageResponse logout(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+        cookiesUtils.extractRefreshTokenFromCookiesOrRequestBody(servletRequest).ifPresent(token -> {
+            try {
+                if (jwtUtils.isRefreshToken(token)){
+                    String jti = jwtUtils.extractJti(token) ;
+                    cookiesUtils.clearRefreshTokenCookieFromHeader(servletResponse);
+                    refreshTokenRepository.findByTokenId(jti)
+                            .ifPresent(refreshToken -> {
+                                refreshToken.setRevoked(true);
+                                refreshTokenRepository.save(refreshToken);
+                            });
+                }
+            } catch(JwtException ignore) {
+
+            }
+        });
+        clearSecurityContext(servletRequest , servletResponse) ;
+        return MessageResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message("Logout successfully.")
+                .timestamp(Instant.now())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public MessageResponse logoutAll(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+        Optional<String> refreshTokenOptional = cookiesUtils.extractRefreshTokenFromCookiesOrRequestBody(servletRequest);
+
+        if (refreshTokenOptional.isPresent()) {
+            String token = refreshTokenOptional.get() ;
+            try {
+                if (jwtUtils.isRefreshToken(token)){
+                    String jti = jwtUtils.extractJti(token) ;
+                    cookiesUtils.clearRefreshTokenCookieFromHeader(servletResponse);
+                    refreshTokenRepository.findByTokenId(jti)
+                            .ifPresent(refreshToken -> {
+                                User tokenUser = refreshToken.getUser() ;
+                                revokeAllRefreshToken(tokenUser) ;
+                            });
+                }
+            } catch(JwtException ignore) {
+
+            }
+        }else {
+            logoutUsingAccessToken(servletRequest , servletResponse );
+        }
+
+        clearSecurityContext(servletRequest , servletResponse) ;
+        return MessageResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message("All Session logged out successfully.")
+                .timestamp(Instant.now())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public MessageResponse verifyEmail(String token) {
+        // 1. Consume immediately: This is an atomic "get-and-delete" in Redis
+        String userId = emailVerificationCacheService.validateAndConsume(token)
+                .orElseThrow(() -> new InvalidVerificationToken("Token expired or invalid."));
+
+        // 2. Fetch User
+        User user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> new UserNotFoundException("User associated with token not found."));
+
+        // 3. Update Status
+        user.setEnabled(true);
+        user.setVerified(true);
+        user.setStatus(UserStatus.ACTIVE);
+        userRepository.save(user);
+
+        return MessageResponse.builder()
+                .message("Email verified successfully.")
+                .status(HttpStatus.OK.value())
+                .timestamp(Instant.now())
+                .build();
+    }
+
+
+    //Helper methods ---> To revoke all the refresh token and end all the session if reuse detected
+    private void revokeAllRefreshToken(User user) {
+        refreshTokenRepository.revokeAllTokensByUser(user.getId()) ;
+    }
+
+    //Helper Method ---> To clear the security context and cookies
+    private void clearSecurityContext(HttpServletRequest request , HttpServletResponse response) {
+        SecurityContextHolder.clearContext();
+        cookiesUtils.clearRefreshTokenCookieFromHeader(response);
+        cookiesUtils.addNoStoreHeader(response);
+    }
+
+    private void logoutUsingAccessToken(HttpServletRequest request , HttpServletResponse response) {
+        String accessToken = jwtUtils.extractTokenFromHeader(request) ;
+        String userId = jwtUtils.extractUserIdFromAccessToken(accessToken);
+        UUID uuidUserId = UUID.fromString(userId) ;
+        Optional<User> user = userRepository.findById(uuidUserId) ;
+
+        if (user.isEmpty()) {
+            return ;
+        }else {
+            revokeAllRefreshToken(user.get());
+        }
+    }
+
+    //Helper method ---> To build the refresh token object
+    private RefreshToken buildRefreshToken(User user , String refreshTokenJti , HttpServletRequest servletRequest) {
+        String userAgent = IPUtils.extractUserAgent(servletRequest) ;
+        String ipAddress = IPUtils.extractIpAddress(servletRequest) ;
+
+        return RefreshToken.builder()
+                .tokenId(refreshTokenJti)
+                .user(user)
+                .expiresAt(Instant.now().plusMillis(jwtUtils.getJwtRefreshTokenExpirationInMS()))
+                .revoked(false)
+                .userAgent(userAgent)
+                .ipAddress(ipAddress)
+                .build() ;
+    }
+
+    //Helper method ---> To build the user object from registration request
+    private User buildUserFromRegistrationRequest(UserRegistrationRequest request) {
+        return User.builder()
+                .email(request.getEmail())
+                .hashedPassword(passwordEncoder.encode(request.getPassword()))
+                .name(request.getName())
+                .enabled(false)
+                .verified(false)
+                .frozen(false)
+                .socialProvider(SocialProvider.LOCAL)
+                .status(UserStatus.VERIFICATION_PENDING)
+                .avatarUrl(request.getAvatarUrl())
+                .build() ;
+    }
+}
