@@ -18,6 +18,7 @@ import com.dishari.in.web.dto.request.*;
 import com.dishari.in.web.dto.response.LoginResponse;
 import com.dishari.in.web.dto.response.MessageResponse;
 import com.dishari.in.web.dto.response.RefreshTokenResponse;
+import com.dishari.in.web.dto.response.UserResponse;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -331,7 +332,7 @@ public class AuthServiceImpl implements AuthService {
             }
         });
 
-        return null ;
+        return buildMessageResponse(HttpStatus.OK , "Password reset successfully.") ;
     }
 
     @Override
@@ -340,9 +341,78 @@ public class AuthServiceImpl implements AuthService {
         //First we check that the rate limit is not exceeded
         String email = request.getEmail() ;
 
+        //Rate limit
+        if (!emailVerificationCacheService.canResendVerification(email)) {
+            //Set try after header
+            throw new TooManyRequestException("Too many request. Try after sometime.") ;
+        }
 
+        Optional<User> userOpt = userRepository.findByEmail(email) ;
 
-        return null ;
+        if (userOpt.isEmpty()){
+            return buildMessageResponse(HttpStatus.OK , "If this email is registered, a verification link has been sent.") ;
+        }
+
+        User user = userOpt.get() ;
+
+        //Checking if the user is already verified then return
+        if (user.isVerified()) {
+            return buildMessageResponse(HttpStatus.OK , "Email is already verified.") ;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                //Now we store the verification token into redis with TTL = 15 min
+                String token = emailVerificationCacheService.generateAndStoreToken(user.getId().toString());
+                //Send email that verification link has been sent
+                emailService.sendVerificationEmail(email , user.getName() , token) ;
+            }
+        });
+
+        return buildMessageResponse(HttpStatus.OK , "Verification link sent successfully to your email.") ;
+    }
+
+    @Override
+    public UserResponse getUser(String email) {
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found.")) ;
+
+        return UserResponse.fromEntity(user);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateUser(String email, UserUpdateRequest request) {
+        Optional<User> userOpt = userRepository.findByEmail(email) ;
+        if (userOpt.isEmpty()) {
+            throw new UserNotFoundException("User not found.") ;
+        }
+        User user = userOpt.get() ;
+
+        String name = user.getName() ;
+
+        if (request.getName() != null && !request.getName().trim().isEmpty()) {
+            name = request.getName() ;
+        }
+
+        String timeZone = user.getTimeZone() ;
+
+        if (request.getTimeZone() != null && !request.getTimeZone().trim().isEmpty()) {
+            timeZone = request.getTimeZone() ;
+        }
+
+        String avatarUrl = user.getAvatarUrl() ;
+
+        if (request.getAvatarUrl() != null && !request.getAvatarUrl().trim().isEmpty()) {
+            avatarUrl = request.getAvatarUrl() ;
+        }
+
+        user.setName(name) ;
+        user.setTimeZone(timeZone) ;
+        user.setAvatarUrl(avatarUrl) ;
+        userRepository.save(user) ;
+
+        return UserResponse.fromEntity(user) ;
     }
 
 

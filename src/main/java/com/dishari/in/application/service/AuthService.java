@@ -5,6 +5,7 @@ import com.dishari.in.web.dto.request.*;
 import com.dishari.in.web.dto.response.LoginResponse;
 import com.dishari.in.web.dto.response.MessageResponse;
 import com.dishari.in.web.dto.response.RefreshTokenResponse;
+import com.dishari.in.web.dto.response.UserResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -28,4 +29,8 @@ public interface AuthService {
     MessageResponse resetPassword(UserResetPasswordRequest request);
 
     MessageResponse resendVerification(UserResendVerificationRequest request);
+
+    UserResponse getUser(String email);
+
+    UserResponse updateUser(String email, UserUpdateRequest request);
 }

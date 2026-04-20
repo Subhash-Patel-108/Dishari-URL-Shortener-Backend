@@ -8,6 +8,7 @@ public class AppConstants {
             "/api/v1/auth/verify-email/**" ,
             "/api/v1/auth/forgot-password" ,
             "/api/v1/auth/reset-password" ,
+            "/api/v1/auth/resend-verification" ,
             "/v3/api-docs" ,
             "/v3/api-docs/**" ,
             "/swagger-ui.html" ,

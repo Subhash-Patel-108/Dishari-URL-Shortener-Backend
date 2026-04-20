@@ -1,6 +1,7 @@
 package com.dishari.in.web.controller;
 
 import com.dishari.in.application.service.AuthService;
+import com.dishari.in.domain.entity.User;
 import com.dishari.in.web.dto.request.*;
 import com.dishari.in.web.dto.response.LoginResponse;
 import com.dishari.in.web.dto.response.MessageResponse;
@@ -12,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -107,6 +109,25 @@ public class AuthController {
             @Valid @RequestBody UserResendVerificationRequest request
     ) {
         MessageResponse response = authService.resendVerification(request) ;
+        return ResponseEntity.status(HttpStatus.OK).body(response) ;
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> getMe(
+            @AuthenticationPrincipal User user
+    ) {
+        String email = user.getEmail() ;
+        UserResponse response = authService.getUser(email) ;
+        return ResponseEntity.status(HttpStatus.OK).body(response) ;
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<UserResponse> updateMe(
+            @RequestBody @Valid UserUpdateRequest request ,
+            @AuthenticationPrincipal User user
+    ) {
+        String email = user.getEmail() ;
+        UserResponse response = authService.updateUser(email , request) ;
         return ResponseEntity.status(HttpStatus.OK).body(response) ;
     }
 }

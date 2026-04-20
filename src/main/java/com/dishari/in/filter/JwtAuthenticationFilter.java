@@ -1,5 +1,6 @@
 package com.dishari.in.filter;
 
+import com.dishari.in.config.AppConstants;
 import com.dishari.in.domain.entity.User;
 import com.dishari.in.domain.enums.UserRole;
 import com.dishari.in.exception.JwtAuthenticationException;
@@ -85,5 +86,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request , response);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getServletPath();
+        // Skip the JWT filter for all public URLs defined in your constants
+        for (String url : AppConstants.AUTH_PUBLIC_URLS) {
+            // Handle wildcards like /**
+            if (url.endsWith("/**")) {
+                String base = url.substring(0, url.length() - 3);
+                if (path.startsWith(base)) return true;
+            } else if (url.equals(path)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
