@@ -33,4 +33,14 @@ public final class RedisKeys {
     public static String accessTokenBlacklist(String jti) {
         return "blacklist:access:" + jti;
     }
+
+    //──Forgot Password Request────────────────────────
+    //Value: userId
+    public static String forgotPassword(String token) {
+        return "forgot:password:"+token ;
+    }
+
+    public static String forgotPasswordRateLimit(String email) {
+        return "forgot:password:ratelimit:" + email ;
+    }
 }

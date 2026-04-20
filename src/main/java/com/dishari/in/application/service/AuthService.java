@@ -1,12 +1,10 @@
 package com.dishari.in.application.service;
 
 
-import com.dishari.in.web.dto.request.UserLoginRequest;
-import com.dishari.in.web.dto.request.UserRegistrationRequest;
+import com.dishari.in.web.dto.request.*;
 import com.dishari.in.web.dto.response.LoginResponse;
 import com.dishari.in.web.dto.response.MessageResponse;
 import com.dishari.in.web.dto.response.RefreshTokenResponse;
-import com.dishari.in.web.dto.response.UserResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -24,4 +22,10 @@ public interface AuthService {
     MessageResponse logoutAll(HttpServletRequest servletRequest, HttpServletResponse servletResponse);
 
     MessageResponse verifyEmail(String token);
+
+    MessageResponse forgotPassword(HttpServletRequest servletRequest , HttpServletResponse servletResponse , UserForgotPasswordRequest request);
+
+    MessageResponse resetPassword(UserResetPasswordRequest request);
+
+    MessageResponse resendVerification(UserResendVerificationRequest request);
 }

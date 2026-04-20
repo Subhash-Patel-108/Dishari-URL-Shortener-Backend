@@ -9,12 +9,12 @@ import com.dishari.in.domain.repository.RefreshTokenRepository;
 import com.dishari.in.domain.repository.UserRepository;
 import com.dishari.in.exception.*;
 import com.dishari.in.infrastructure.cache.EmailVerificationCacheService;
+import com.dishari.in.infrastructure.cache.ForgotPasswordCacheService;
 import com.dishari.in.infrastructure.email.EmailService;
 import com.dishari.in.utils.CookiesUtils;
 import com.dishari.in.utils.IPUtils;
 import com.dishari.in.utils.JwtUtils;
-import com.dishari.in.web.dto.request.UserLoginRequest;
-import com.dishari.in.web.dto.request.UserRegistrationRequest;
+import com.dishari.in.web.dto.request.*;
 import com.dishari.in.web.dto.response.LoginResponse;
 import com.dishari.in.web.dto.response.MessageResponse;
 import com.dishari.in.web.dto.response.RefreshTokenResponse;
@@ -23,6 +23,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -50,6 +51,10 @@ public class AuthServiceImpl implements AuthService {
     private final CookiesUtils cookiesUtils ;
     private final EmailVerificationCacheService emailVerificationCacheService ;
     private final EmailService emailService ;
+    private final ForgotPasswordCacheService forgotPasswordCacheService ;
+
+    @Value("${password.pepper}")
+    private String pepper ;
 
     @Override // Method for user registration
     @Transactional
@@ -78,11 +83,7 @@ public class AuthServiceImpl implements AuthService {
             }
         });
 
-        return MessageResponse.builder()
-                .status(HttpStatus.OK.value())
-                .message("Verification link has been sent to your email.")
-                .timestamp(Instant.now())
-                .build();
+        return buildMessageResponse(HttpStatus.OK , "Verification link has been sent to your email.") ;
     }
 
     @Override
@@ -110,7 +111,8 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // Manually verify password — skip authenticationManager's DB lookup
-        if (!passwordEncoder.matches(request.getPassword(), user.getHashedPassword())) {
+        String pepperedPassword = pepperedPassword(request.getPassword()) ;
+        if (!passwordEncoder.matches(pepperedPassword, user.getHashedPassword())) {
             throw new BadCredentialsException("Invalid Email or Password");
         }
 
@@ -217,11 +219,7 @@ public class AuthServiceImpl implements AuthService {
             }
         });
         clearSecurityContext(servletRequest , servletResponse) ;
-        return MessageResponse.builder()
-                .status(HttpStatus.OK.value())
-                .message("Logout successfully.")
-                .timestamp(Instant.now())
-                .build();
+        return buildMessageResponse(HttpStatus.OK , "Logout successfully.") ;
     }
 
     @Override
@@ -249,11 +247,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         clearSecurityContext(servletRequest , servletResponse) ;
-        return MessageResponse.builder()
-                .status(HttpStatus.OK.value())
-                .message("All Session logged out successfully.")
-                .timestamp(Instant.now())
-                .build();
+        return buildMessageResponse(HttpStatus.OK , "All Session logged out successfully.") ;
     }
 
     @Override
@@ -273,11 +267,82 @@ public class AuthServiceImpl implements AuthService {
         user.setStatus(UserStatus.ACTIVE);
         userRepository.save(user);
 
-        return MessageResponse.builder()
-                .message("Email verified successfully.")
-                .status(HttpStatus.OK.value())
-                .timestamp(Instant.now())
-                .build();
+        return buildMessageResponse(HttpStatus.OK , "Email verified successfully.") ;
+    }
+
+    @Override
+    @Transactional
+    public MessageResponse forgotPassword(HttpServletRequest servletRequest, HttpServletResponse servletResponse, UserForgotPasswordRequest request) {
+
+        String email = request.getEmail() ;
+
+        if (!forgotPasswordCacheService.canResendVerification(email)) {
+            //Set try after header
+            servletResponse.setHeader("Retry-After", Instant.now().plusMillis(15).toString());
+            throw new TooManyRequestException("Too many request. Try after sometime.") ;
+        }
+
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isEmpty()) {
+            // Silent return — don't reveal email doesn't exist
+            return buildMessageResponse(HttpStatus.OK , "If this email is registered, a reset link has been sent.") ;
+        }
+
+        User user = userOpt.get() ;
+
+        //Verify that the user must be logged in without any social provider
+        if (user.getSocialProvider() != SocialProvider.LOCAL) {
+            throw new ExternalAuthenticationException("Password change failed. Your account was created using "+ user.getSocialProvider().toString() +". Please manage your security settings directly through your social login provider.") ;
+        }
+
+        //Now we store the forgot password token into redis with TTL = 15 min
+        String token = forgotPasswordCacheService.generateAndStoreToken(user.getId().toString());
+
+        //Send the email
+        emailService.sendForgotPasswordEmail(email, user.getName() , token);
+
+        return buildMessageResponse(HttpStatus.OK , "Forgot password link sent successfully to your email");
+    }
+
+    @Override
+    @Transactional
+    public MessageResponse resetPassword(UserResetPasswordRequest request) {
+
+        String token = request.getToken() ;
+
+        String userId = forgotPasswordCacheService.validateAndConsume(token).orElseThrow(() -> new InvalidVerificationToken("Token expired or invalid.")) ;
+
+        User tokenUser = userRepository.findById(UUID.fromString(userId)).orElseThrow(() -> new UserNotFoundException("User associated with token not found.")) ;
+
+        String rawPassword =  request.getPassword() ;
+
+        String pepperedPassword = pepperedPassword(rawPassword ) ;
+
+        tokenUser.setHashedPassword(passwordEncoder.encode(pepperedPassword)) ;
+        userRepository.save(tokenUser) ;
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                //Send email that password has been changed
+                emailService.sendPasswordChangedEmail(tokenUser.getEmail() , tokenUser.getName()) ;
+                return ;
+            }
+        });
+
+        return null ;
+    }
+
+    @Override
+    @Transactional
+    public MessageResponse resendVerification(UserResendVerificationRequest request) {
+        //First we check that the rate limit is not exceeded
+        String email = request.getEmail() ;
+
+
+
+        return null ;
     }
 
 
@@ -323,9 +388,10 @@ public class AuthServiceImpl implements AuthService {
 
     //Helper method ---> To build the user object from registration request
     private User buildUserFromRegistrationRequest(UserRegistrationRequest request) {
+        String pepperedPassword = pepperedPassword(request.getPassword()) ;
         return User.builder()
                 .email(request.getEmail())
-                .hashedPassword(passwordEncoder.encode(request.getPassword()))
+                .hashedPassword(passwordEncoder.encode(pepperedPassword))
                 .name(request.getName())
                 .enabled(false)
                 .verified(false)
@@ -334,5 +400,18 @@ public class AuthServiceImpl implements AuthService {
                 .status(UserStatus.VERIFICATION_PENDING)
                 .avatarUrl(request.getAvatarUrl())
                 .build() ;
+    }
+
+    //Helper Method ---> To build the message response
+    private MessageResponse buildMessageResponse(HttpStatus status , String message) {
+        return MessageResponse.builder()
+                .status(status.value())
+                .message(message)
+                .timestamp(Instant.now())
+                .build() ;
+    }
+
+    private String pepperedPassword(String rawPassword) {
+        return rawPassword + pepper ;
     }
 }

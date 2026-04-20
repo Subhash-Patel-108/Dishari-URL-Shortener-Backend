@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Service
 @Slf4j
 public class EmailService {
@@ -41,10 +44,37 @@ public class EmailService {
 
         String htmlContent = templateEngine.process("verify-email", context);
 
-        sendHtmlMail(toEmail , "Verify your account - SnapUrl", htmlContent);
+        sendHtmlMail(toEmail , "Verify your account - Dishari", htmlContent);
         log.info("Verification email sent to={}", toEmail);
     }
 
+    @Async
+    public void sendForgotPasswordEmail(String toEmail, String name , String token) {
+        String verificationLink = frontendBaseUrl + "/auth/forgot-password?token=" + token;
+
+        Context context = new Context();
+        context.setVariable("resetLink", verificationLink);
+        context.setVariable("supportEmail", supportEmail);
+        context.setVariable("userName", name);
+
+        String htmlContent = templateEngine.process("forgot-password", context);
+
+        sendHtmlMail(toEmail , "Forgot Password - Dishari", htmlContent);
+        log.info("Forgot password email sent to={}", toEmail);
+    }
+
+    @Async
+    public void sendPasswordChangedEmail(String email, String name) {
+        String changeTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a")) ;
+        Context context = new Context();
+        context.setVariable("userName", name);
+        context.setVariable("changeTime", changeTime);
+
+        String htmlContent = templateEngine.process("password-changed", context);
+
+        sendHtmlMail(email , "Password Changed - Dishari", htmlContent);
+        log.info("Password changed email sent to={}", email);
+    }
 
     private void sendHtmlMail(String to , String subject , String htmlContent) {
         try {

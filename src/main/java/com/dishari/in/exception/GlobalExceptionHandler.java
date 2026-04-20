@@ -53,10 +53,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             EmailAlreadyExistException.class ,
             SocialLoginRequiredException.class ,
-            RedisOperationException.class
+            RedisOperationException.class ,
+            ExternalAuthenticationException.class
     })
     public ResponseEntity<ErrorResponse> handleConflict(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.CONFLICT , exception , request) ;
+    }
+
+
+    //---------Too Many Request : 429
+    @ExceptionHandler({
+            TooManyRequestException.class
+    })
+    public ResponseEntity<ErrorResponse> handleTooManyRequest(Exception exception , WebRequest request) {
+        return buildResponse(HttpStatus.TOO_MANY_REQUESTS , exception , request) ;
     }
 
     // 500 - DATABASE / INTERNAL ERRORS

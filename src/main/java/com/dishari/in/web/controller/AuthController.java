@@ -1,8 +1,7 @@
 package com.dishari.in.web.controller;
 
 import com.dishari.in.application.service.AuthService;
-import com.dishari.in.web.dto.request.UserLoginRequest;
-import com.dishari.in.web.dto.request.UserRegistrationRequest;
+import com.dishari.in.web.dto.request.*;
 import com.dishari.in.web.dto.response.LoginResponse;
 import com.dishari.in.web.dto.response.MessageResponse;
 import com.dishari.in.web.dto.response.RefreshTokenResponse;
@@ -74,12 +73,40 @@ public class AuthController {
     }
 
     //Verify Email --> Send token then verify it
-    @GetMapping("/verify-email/{token}")
+    @GetMapping("/verify-email")
     public ResponseEntity<MessageResponse> verifyEmail(
-            @PathVariable("token") String token
+            @RequestParam("token") String token
     ) {
-        MessageResponse response = authService.verifyEmail(token) ;
+        MessageResponse response = authService.verifyEmail(token);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    //Forgot Password --> To send the request for forgot password
+    @PostMapping("/forgot-password")
+    public ResponseEntity<MessageResponse> forgotPassword(
+            HttpServletRequest servletRequest ,
+            HttpServletResponse servletResponse ,
+            @RequestBody @Valid UserForgotPasswordRequest request
+    ) {
+        MessageResponse response = authService.forgotPassword(servletRequest , servletResponse , request) ;
         return ResponseEntity.status(HttpStatus.OK).body(response) ;
     }
 
+    //Change Password --> To change the password with a token
+    @PostMapping("/reset-password")
+    public ResponseEntity<MessageResponse> resetPassword(
+            @Valid @RequestBody UserResetPasswordRequest request
+    ){
+        MessageResponse response = authService.resetPassword(request) ;
+        return ResponseEntity.status(HttpStatus.OK).body(response) ;
+    }
+
+    //Resend Email Verification --> To send Email to verify the account
+    @PostMapping("/resend-verification")
+    public ResponseEntity<MessageResponse> resendVerification(
+            @Valid @RequestBody UserResendVerificationRequest request
+    ) {
+        MessageResponse response = authService.resendVerification(request) ;
+        return ResponseEntity.status(HttpStatus.OK).body(response) ;
+    }
 }

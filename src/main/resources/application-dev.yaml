@@ -40,6 +40,7 @@ spring:
         email-verification: 900        # 15 minutes in seconds
         url-redirect: 3600             # 1 hour
         rate-limit: 60                 # 1 minutes window
+        forgot-password: 900           # 15 minutes in seconds
         token-blacklist: 86400         # 24 hours
     email:
       from: noreply@snapurl.com
@@ -89,3 +90,7 @@ cookie:
   cookie-domain: ${JWT_COOKIE_DOMAIN:localhost}
   cookie-max-age-in-seconds: ${COOKIE_EXPIRATION_TIME_IN_seconds:86400}
   cookie-path: ${COOKIE_PATH:/}
+
+
+password:
+  pepper: ${PASSWORD_PEPPER}

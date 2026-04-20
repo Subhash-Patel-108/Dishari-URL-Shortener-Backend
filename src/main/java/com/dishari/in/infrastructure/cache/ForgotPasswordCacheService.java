@@ -1,7 +1,5 @@
 package com.dishari.in.infrastructure.cache;
 
-
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,23 +10,23 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
-public class EmailVerificationCacheService {
+@RequiredArgsConstructor
+public class ForgotPasswordCacheService {
 
     private final RedisService redisService;
 
-    @Value("${spring.app.redis.ttl.email-verification}")
+    @Value("${spring.app.redis.ttl.forgot-password}")
     private long ttlSeconds;
 
     private static final int MAX_RESEND_PER_WINDOW = 3;
-    private static final Duration RESEND_WINDOW = Duration.ofMinutes(15);
+    private static final Duration RESEND_WINDOW = Duration.ofDays(1); // maximum 3 request per day for forgot password
 
     // ── Generate and store verification token ───────────────────
 
     public String generateAndStoreToken(String userId) {
         String token = UUID.randomUUID().toString().replace("-", "");
-        String key = RedisKeys.emailVerification(token);
+        String key = RedisKeys.forgotPassword(token);
         redisService.set(key, userId, Duration.ofSeconds(ttlSeconds));
         log.debug("Email verification token stored for userId={}", userId);
         return token;
@@ -37,7 +35,7 @@ public class EmailVerificationCacheService {
     // ── Validate and consume token (one-time use) ────────────────
 
     public Optional<String> validateAndConsume(String token) {
-        String key = RedisKeys.emailVerification(token);
+        String key = RedisKeys.forgotPassword(token);
         Optional<String> userId = redisService.get(key);
 
         if (userId.isPresent()) {
@@ -53,7 +51,7 @@ public class EmailVerificationCacheService {
     // ── Rate limit resend requests ───────────────────────────────
 
     public boolean canResendVerification(String email) {
-        String key = RedisKeys.emailVerifyRateLimit(email);
+        String key = RedisKeys.forgotPasswordRateLimit(email);
         long count = redisService.incrementWithTtl(key, RESEND_WINDOW);
         return count <= MAX_RESEND_PER_WINDOW;
     }
