@@ -94,3 +94,12 @@ cookie:
 
 password:
   pepper: ${PASSWORD_PEPPER}
+
+app:
+  snowflake:
+    node-id: ${SNOWFLAKE_NODE_ID:1}   # unique per instance — set via env in prod
+    epoch: 1700000000000              # custom epoch — Nov 14 2023 (ms)
+  slug:
+    default-length: ${SLUG_DEFAULT_LENGTH:7}
+    max-retry-attempts: ${SLUG_MAX_RETRY_ATTEMPTS:3}
+  base-url: ${APP_BASE_URL:http://localhost:8080}

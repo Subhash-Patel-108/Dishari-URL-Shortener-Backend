@@ -23,6 +23,8 @@ import java.util.Set;
         @Index(name = "short_url_slug_idx" , columnList = "slug" , unique = true) ,
         @Index(name = "short_url_user_idx" , columnList = "user_id") ,
         @Index(name = "short_url_user_status_idx" , columnList = "status,user_id") ,
+        @Index(name = "idx_user_url_status", columnList = "user_id, original_url, status") ,
+        @Index(name = "idx_slug_status", columnList = "slug, status")
 })
 
 public class ShortUrl extends BaseEntity{

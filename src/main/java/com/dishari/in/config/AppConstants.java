@@ -1,5 +1,7 @@
 package com.dishari.in.config;
 
+import java.util.Set;
+
 public class AppConstants {
     public static final String[] AUTH_PUBLIC_URLS = {
             "/api/v1/auth/register" ,
@@ -14,4 +16,19 @@ public class AppConstants {
             "/swagger-ui.html" ,
             "/swagger-ui/**"
     } ;
+
+
+
+    public static final Set<String> RESERVED_SLUGS = Set.of(
+            "api",
+            "admin",
+            "bio",
+            "dashboard",
+            "login",
+            "register",
+            "docs",
+            "health",
+            "swagger",
+            "actuator"
+    );
 }
