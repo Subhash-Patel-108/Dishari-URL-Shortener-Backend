@@ -37,7 +37,6 @@ public class UrlController {
     }
 
     @PostMapping("/custom")
-    @PreAuthorize("hasRole('PREMIUM')")
     public ResponseEntity<?> createCustomUrl(
             @Valid @RequestBody CreateCustomUrlRequest request ,
             @AuthenticationPrincipal User user
