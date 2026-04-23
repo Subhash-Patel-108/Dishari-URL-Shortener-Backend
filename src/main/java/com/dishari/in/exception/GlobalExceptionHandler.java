@@ -8,12 +8,14 @@ import org.springframework.dao.TransientDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
+import java.nio.file.AccessDeniedException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -41,6 +43,15 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.UNAUTHORIZED , exception , request) ;
     }
 
+    ///------FORBIDDEN : 403
+    @ExceptionHandler({
+            AccessDeniedException.class ,
+            AuthorizationDeniedException.class
+    })
+    public ResponseEntity<ErrorResponse> handleForbidden(Exception exception , WebRequest request) {
+        return buildResponse(HttpStatus.FORBIDDEN , exception , request) ;
+    }
+
     ///------NOT_FOUND : 404
     @ExceptionHandler({
             UsernameNotFoundException.class ,
@@ -57,7 +68,8 @@ public class GlobalExceptionHandler {
             SocialLoginRequiredException.class ,
             RedisOperationException.class ,
             ExternalAuthenticationException.class ,
-            SlugAlreadyTakenException.class
+            SlugAlreadyTakenException.class ,
+
     })
     public ResponseEntity<ErrorResponse> handleConflict(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.CONFLICT , exception , request) ;

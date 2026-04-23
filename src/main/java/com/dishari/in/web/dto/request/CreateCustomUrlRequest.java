@@ -33,9 +33,9 @@ public record CreateCustomUrlRequest(
 
         Set<CreateGeoRuleRequest> geoRules ,
 
-        Set<CreateDeviceRuleRequest> deviceRules
+        Set<CreateDeviceRuleRequest> deviceRules ,
 
-        //TODO: implementing Link Rotation
+        CreateLinkRotationRequest linkRotation
 
 ) {
 }

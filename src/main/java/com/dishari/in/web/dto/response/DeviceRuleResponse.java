@@ -10,7 +10,7 @@ public record DeviceRuleResponse(
         String destinationUrl ,
         boolean isDefault
 ) {
-    private static DeviceRuleResponse fromEntity(DeviceRule request) {
+    public static DeviceRuleResponse fromEntity(DeviceRule request) {
         return new DeviceRuleResponse(
                 request.getId().toString() ,
                 request.getDeviceType() ,

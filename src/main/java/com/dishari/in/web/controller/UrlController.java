@@ -4,11 +4,13 @@ import com.dishari.in.application.service.UrlService;
 import com.dishari.in.domain.entity.User;
 import com.dishari.in.web.dto.request.CreateCustomUrlRequest;
 import com.dishari.in.web.dto.request.CreateNormalUrlRequest;
+import com.dishari.in.web.dto.response.CustomUrlResponse;
 import com.dishari.in.web.dto.response.NormalUrlResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,12 +37,13 @@ public class UrlController {
     }
 
     @PostMapping("/custom")
+    @PreAuthorize("hasRole('PREMIUM')")
     public ResponseEntity<?> createCustomUrl(
             @Valid @RequestBody CreateCustomUrlRequest request ,
             @AuthenticationPrincipal User user
     ){
         String email = user.getEmail() ;
-        NormalUrlResponse response = urlService.createCustomUrl(email , request) ;
+        CustomUrlResponse response = urlService.createCustomUrl(email , request) ;
         return ResponseEntity.status(HttpStatus.CREATED).body(response) ;
     }
 }
