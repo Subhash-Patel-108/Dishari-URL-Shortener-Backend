@@ -29,7 +29,6 @@ public class LinkRotation extends BaseEntity{
     @OneToMany(
             mappedBy = "linkRotation" ,
             fetch = FetchType.LAZY ,
-            cascade = CascadeType.ALL ,
             orphanRemoval = true)
     @Builder.Default
     private List<RotationDestination> rotationDestinations = new ArrayList<>() ;

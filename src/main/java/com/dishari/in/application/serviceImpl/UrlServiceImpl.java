@@ -4,7 +4,6 @@ import com.dishari.in.application.service.UrlService;
 import com.dishari.in.domain.entity.*;
 import com.dishari.in.domain.enums.UrlStatus;
 import com.dishari.in.domain.repository.*;
-import com.dishari.in.exception.CustomSlugAlreadyExistsException;
 import com.dishari.in.exception.SlugAlreadyTakenException;
 import com.dishari.in.exception.UserNotFoundException;
 import com.dishari.in.infrastructure.generator.SlugGeneratorService;
@@ -31,9 +30,11 @@ public class UrlServiceImpl implements UrlService {
     private final GeoRuleRepository geoRuleRepository;
     private final DeviceRuleRepository deviceRuleRepository;
     private final LinkRotationRepository linkRotationRepository;
+    private final TagRepository tagRepository;
 
     @Value("${app.base-url}")
     private String baseUrl ;
+    private final RotationDestinationRepository rotationDestinationRepository;
 
     //Method that create normal short url
     /**
@@ -100,42 +101,34 @@ public class UrlServiceImpl implements UrlService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found."));
 
-        //Before generating new short url first we check that the user has already created the short url for the original long url
-        Optional<ShortUrl> shortUrlOptional = shortUrlRepository.findBySlugAndStatus(request.customSlug()  , UrlStatus.ACTIVE) ;
-
-        if (shortUrlOptional.isPresent()) {
+        // Validation
+        if (shortUrlRepository.existsBySlugAndStatus(request.customSlug(), UrlStatus.ACTIVE)) {
             throw new SlugAlreadyTakenException("Custom slug already exists.");
         }
-        ShortUrl shortUrl = createCustomShortUrl(user , request) ;
+        slugGeneratorService.validateCustomSlug(request.customSlug());
 
-        Set<Tag> tags = new HashSet<>() ;
-        if (request.tags() != null) {
-            tags = storeTag(shortUrl , request.tags()) ;
-        }
+        // 1. Create and Save Root
+        ShortUrl savedShortUrl = shortUrlRepository.save(createCustomShortUrl(user, request));
 
-        Set<GeoRule> geoRules  = new HashSet<>() ;
-        if (request.geoRules() != null) {
-            shortUrl.setHasGeoRule(true);
-            geoRules = storeGeoRule(shortUrl , request.geoRules()) ;
-        }
+        // 2. Fetch or Create Collections (Optimized with saveAll)
+        Set<Tag> tags = storeTag(savedShortUrl, request.tags());
+        Set<GeoRule> geoRules = storeGeoRule(savedShortUrl, request.geoRules());
+        Set<DeviceRule> deviceRules = storeDeviceRule(savedShortUrl, request.deviceRules());
 
-
-        Set<DeviceRule> deviceRules = new HashSet<>() ;
-        if (request.deviceRules() != null) {
-            shortUrl.setHasDeviceRule(true);
-            deviceRules = storeDeviceRule(shortUrl , request.deviceRules()) ;
-        }
-
-        LinkRotation linkRotation = null ;
+        LinkRotation linkRotation = null;
         if (request.linkRotation() != null) {
-            shortUrl.setHasLinkRotation(true);
-            storeLinkRotation(shortUrl , request.linkRotation()) ;
-            linkRotation = linkRotationRepository.findByShortUrlIdWithDestinations(shortUrl.getId()).orElseThrow(() -> new RuntimeException("Link rotation not found.")) ;
+            linkRotation = storeLinkRotation(savedShortUrl, request.linkRotation());
         }
 
-        ShortUrl savedUrl = shortUrlRepository.save(shortUrl) ;
-
-        return CustomUrlResponse.fromEntity(savedUrl , tags , geoRules , deviceRules , linkRotation , baseUrl) ;
+        // 3. Return the rich response
+        return CustomUrlResponse.fromEntity(
+                savedShortUrl,
+                tags,
+                geoRules,
+                deviceRules,
+                linkRotation,
+                baseUrl
+        );
     }
 
     /**
@@ -149,7 +142,6 @@ public class UrlServiceImpl implements UrlService {
                 .slug(request.customSlug())
                 .originalUrl(request.originalUrl())
                 .title(request.title())
-                .user(user)
                 .expiresAt(request.expiresAt())
                 .maxClicks(request.maxClicks())
                 .status(UrlStatus.ACTIVE)
@@ -162,7 +154,7 @@ public class UrlServiceImpl implements UrlService {
         }
 
         //If security password is available
-        if (request.password() != null && request.password().trim().isEmpty()) {
+        if (request.password() != null && !request.password().trim().isEmpty()) {
             shortUrl.setHashedPassword(passwordEncoder.encode(request.password()));
         }
 
@@ -193,10 +185,17 @@ public class UrlServiceImpl implements UrlService {
                 .name(request.name())
                 .build() ;
     }
-
     private Set<Tag> storeTag (ShortUrl shortUrl , Set<TagRequest> tags) {
-        shortUrl.setTags(tags.stream().map(this::convertTagRequestToTag).collect(Collectors.toSet()));
-        return shortUrl.getTags();
+        if (tags != null && !tags.isEmpty()) {
+            List<Tag> tagsEntity = tags.stream()
+                    .map(this::convertTagRequestToTag)
+                    .toList();
+
+            List<Tag> savedTags = tagRepository.saveAll(tagsEntity); // Batch save
+            shortUrl.setTags(new HashSet<>(savedTags));
+            return new HashSet<>(tagsEntity) ;
+        }
+        return new HashSet<>() ;
     }
     /**
      * Store geo rule
@@ -204,20 +203,25 @@ public class UrlServiceImpl implements UrlService {
      * @param requestSet // Set of CreateGeoRuleRequest DTO
      */
     private Set<GeoRule> storeGeoRule(ShortUrl shortUrl , Set<CreateGeoRuleRequest> requestSet) {
-        Set<GeoRule> savedGeoRules = new HashSet<>() ;
-
-        for (CreateGeoRuleRequest request : requestSet) {
-            GeoRule geoRule = GeoRule.builder()
-                    .shortUrl(shortUrl)
-                    .countryCode(request.countryCode())
-                    .destinationUrl(request.destinationUrl())
-                    .isDefault(request.isDefault())
-                    .priority(request.priority())
-                    .build() ;
-            GeoRule savedGeoRule = geoRuleRepository.save(geoRule) ;
-            savedGeoRules.add(savedGeoRule) ;
+        if (requestSet != null && !requestSet.isEmpty()) {
+            shortUrl.setHasGeoRule(true);
+            List<GeoRule> geoRules = requestSet.stream()
+                    .map(rule -> convertGeoRuleRequestToGeoRule(shortUrl ,rule))
+                    .collect(Collectors.toList());
+            List<GeoRule> savedGeoRules =  geoRuleRepository.saveAll(geoRules); // Batch save
+            return new HashSet<>(savedGeoRules) ;
         }
-        return savedGeoRules ;
+        return new HashSet<>() ;
+    }
+
+    private GeoRule convertGeoRuleRequestToGeoRule(ShortUrl shortUrl , CreateGeoRuleRequest request) {
+        return GeoRule.builder()
+                .shortUrl(shortUrl)
+                .countryCode(request.countryCode())
+                .destinationUrl(request.destinationUrl())
+                .isDefault(request.isDefault())
+                .priority(request.priority())
+                .build() ;
     }
 
     /**
@@ -226,19 +230,25 @@ public class UrlServiceImpl implements UrlService {
      * @param requestSet // Set of CreateDeviceRuleRequest DTO
      */
     private Set<DeviceRule> storeDeviceRule(ShortUrl shortUrl , Set<CreateDeviceRuleRequest> requestSet ) {
-        Set<DeviceRule> savedDeviceRules = new HashSet<>() ;
-        for(CreateDeviceRuleRequest request : requestSet) {
-            DeviceRule deviceRule = DeviceRule.builder()
-                    .shortUrl(shortUrl)
-                    .deviceType(request.deviceType())
-                    .destinationUrl(request.destinationUrl())
-                    .isDefault(request.isDefault())
-                    .build() ;
 
-           DeviceRule savedDeviceRule = deviceRuleRepository.save(deviceRule) ;
-           savedDeviceRules.add(savedDeviceRule) ;
+        if (requestSet != null && !requestSet.isEmpty()) {
+            shortUrl.setHasDeviceRule(true);
+            List<DeviceRule> deviceRules = requestSet.stream()
+                    .map(r -> convertDeviceRuleRequestToDeviceRule(shortUrl ,r))
+                    .collect(Collectors.toList());
+            List<DeviceRule> savedDeviceRules = deviceRuleRepository.saveAll(deviceRules); // Batch save
+            return new HashSet<>(savedDeviceRules) ;
         }
-        return savedDeviceRules ;
+        return new HashSet<>() ;
+    }
+
+    private DeviceRule convertDeviceRuleRequestToDeviceRule(ShortUrl shortUrl, CreateDeviceRuleRequest request) {
+        return DeviceRule.builder()
+                .shortUrl(shortUrl)
+                .deviceType(request.deviceType())
+                .destinationUrl(request.destinationUrl())
+                .isDefault(request.isDefault())
+                .build();
     }
 
     /**
@@ -246,19 +256,20 @@ public class UrlServiceImpl implements UrlService {
      * @param shortUrl // ShortUrl entity
      * @param requestSet // CreateLinkRotationRequest DTO
      */
-    private void storeLinkRotation(ShortUrl shortUrl , CreateLinkRotationRequest requestSet){
+    private LinkRotation storeLinkRotation(ShortUrl shortUrl , CreateLinkRotationRequest requestSet){
         LinkRotation linkRotation = LinkRotation.builder()
                 .rotationStrategy(requestSet.rotationStrategy())
                 .shortUrl(shortUrl)
                 .build() ;
 
-        for (CreateRotationDestinationRequest destinationRequest : requestSet.rotationDestinations()) {
-            RotationDestination rotationDestination = convertRotationDestinationRequestToRotationDestination(destinationRequest) ;
-            rotationDestination.setLinkRotation(linkRotation) ;
-            linkRotation.addDestination(rotationDestination);
-        }
-        linkRotationRepository.save(linkRotation) ;
-        return ;
+        LinkRotation savedLinkRotation = linkRotationRepository.save(linkRotation) ;
+        List<RotationDestination> rotationDestinations = requestSet.rotationDestinations().stream()
+                .map(request -> convertRotationDestinationRequestToRotationDestination(savedLinkRotation ,request))
+                .toList() ;
+
+        List<RotationDestination> savedRotationDestinations = rotationDestinationRepository.saveAll(rotationDestinations) ;
+        linkRotation.setRotationDestinations(savedRotationDestinations) ;
+        return linkRotationRepository.save(linkRotation) ;
     }
 
     /**
@@ -266,8 +277,9 @@ public class UrlServiceImpl implements UrlService {
      * @param request // CreateRotationDestinationRequest DTO
      * @return // RotationDestination entity
      */
-    private RotationDestination convertRotationDestinationRequestToRotationDestination(CreateRotationDestinationRequest request) {
+    private RotationDestination convertRotationDestinationRequestToRotationDestination(LinkRotation linkRotation ,CreateRotationDestinationRequest request) {
         return RotationDestination.builder()
+                .linkRotation(linkRotation)
                 .destinationUrl(request.destinationUrl())
                 .weight(request.weight())
                 .position(request.position())

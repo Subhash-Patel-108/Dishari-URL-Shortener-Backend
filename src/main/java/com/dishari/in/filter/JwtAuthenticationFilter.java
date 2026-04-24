@@ -2,6 +2,7 @@ package com.dishari.in.filter;
 
 import com.dishari.in.config.AppConstants;
 import com.dishari.in.domain.entity.User;
+import com.dishari.in.domain.enums.Plan;
 import com.dishari.in.domain.enums.UserRole;
 import com.dishari.in.exception.JwtAuthenticationException;
 import com.dishari.in.utils.JwtUtils;
@@ -52,6 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String email = claims.getSubject();
                 String role = claims.get("role", String.class);
                 String userId = claims.get("userId", String.class);
+                String plan = claims.get("plan", String.class);
 
                 if (email == null || userId == null) {
                     throw new JwtAuthenticationException("Missing email or user id");
@@ -65,6 +67,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             .email(email)
                             .id(UUID.fromString(userId))
                             .role(UserRole.valueOf(role == null ? UserRole.ROLE_USER.name() : role))
+                            .plan(Plan.valueOf(plan == null ? Plan.FREE.name() : plan))
                             .enabled(true) // We trust the token's existence means they were enabled
                             .build();
 

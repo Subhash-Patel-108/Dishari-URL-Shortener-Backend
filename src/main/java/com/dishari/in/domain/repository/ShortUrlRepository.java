@@ -9,11 +9,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ShortUrlRepository extends JpaRepository<ShortUrl, UUID> {
+    // Efficiently returns a boolean without fetching entity data
+    boolean existsBySlugAndStatus(String slug, UrlStatus status);
+
+    // Existing methods
     boolean existsBySlug(String slug);
-
-    //Method to check that user has already created the short url for the original long url
     Optional<ShortUrl> findByUserAndOriginalUrlAndStatus(User user, String originalUrl, UrlStatus status);
-
-    //Method to check that user has already created the short url for the original long url
-    Optional<ShortUrl> findBySlugAndStatus(String slug, UrlStatus status);
 }

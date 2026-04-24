@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.validator.constraints.Range;
 
+import java.time.Instant;
 import java.time.LocalTime;
 
 @Getter

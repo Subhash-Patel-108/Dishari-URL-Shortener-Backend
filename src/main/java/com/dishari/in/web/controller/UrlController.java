@@ -1,7 +1,9 @@
 package com.dishari.in.web.controller;
 
+import com.dishari.in.annotation.RequiresPlan;
 import com.dishari.in.application.service.UrlService;
 import com.dishari.in.domain.entity.User;
+import com.dishari.in.domain.enums.Plan;
 import com.dishari.in.web.dto.request.CreateCustomUrlRequest;
 import com.dishari.in.web.dto.request.CreateNormalUrlRequest;
 import com.dishari.in.web.dto.response.CustomUrlResponse;
@@ -37,6 +39,10 @@ public class UrlController {
     }
 
     @PostMapping("/custom")
+    @RequiresPlan(
+            value = {Plan.ENTERPRISE , Plan.PREMIUM} ,
+            feature = "Custom slug creation"
+    )
     public ResponseEntity<?> createCustomUrl(
             @Valid @RequestBody CreateCustomUrlRequest request ,
             @AuthenticationPrincipal User user

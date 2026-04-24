@@ -46,7 +46,8 @@ public class GlobalExceptionHandler {
     ///------FORBIDDEN : 403
     @ExceptionHandler({
             AccessDeniedException.class ,
-            AuthorizationDeniedException.class
+            AuthorizationDeniedException.class ,
+            PlanUpgradeRequiredException.class
     })
     public ResponseEntity<ErrorResponse> handleForbidden(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.FORBIDDEN , exception , request) ;

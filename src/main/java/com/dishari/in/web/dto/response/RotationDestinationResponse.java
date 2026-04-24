@@ -2,6 +2,7 @@ package com.dishari.in.web.dto.response;
 
 import com.dishari.in.domain.entity.RotationDestination;
 
+import java.time.Instant;
 import java.time.LocalTime;
 
 public record RotationDestinationResponse(

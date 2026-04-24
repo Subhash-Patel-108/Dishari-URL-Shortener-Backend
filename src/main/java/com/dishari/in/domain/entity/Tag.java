@@ -12,9 +12,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 
 
-@Table(name = "tags" , indexes = {
-        @Index(name = "tag_name_idx" , columnList = "name" , unique = true)
-})
+@Table(name = "tags" )
 public class Tag extends BaseEntity {
 
     @Column(name = "name" , nullable = false , length = 50)
