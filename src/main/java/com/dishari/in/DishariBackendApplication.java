@@ -14,7 +14,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 @EntityScan(basePackages = "com.dishari.in.domain.entity")
 @EnableAsync
 @EnableAspectJAutoProxy
-
 public class DishariBackendApplication {
 
 	public static void main(String[] args) {

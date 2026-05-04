@@ -2,6 +2,21 @@ spring:
   application:
     name: snapurl
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: "com.dishari.in.infrastructure.messaging.event"
+
+
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/dishari_url?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
     username: ${DB_USER:root}
@@ -63,7 +78,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        jdbc.batch_size: 25
+        jdbc.batch_size: 100
         order_inserts: true
         order_updates: true
 
@@ -74,6 +89,8 @@ spring:
 #  threads:
 #    virtual:
 #      enabled: true
+
+
 
 jwt:
   secret: ${JWT_SECRET:867760380f8f4d7fb0752e7331c7412653f159901d4f42a12b792094f05421d72ca8ac2e9d057de4a517dfa2b0150fb3}
@@ -103,3 +120,12 @@ app:
     default-length: ${SLUG_DEFAULT_LENGTH:7}
     max-retry-attempts: ${SLUG_MAX_RETRY_ATTEMPTS:3}
   base-url: ${APP_BASE_URL:http://localhost:8080}
+  kafka:
+    groups:
+      qr-generation: qr-generation-group
+      bulk-creation: bulk-url-group
+    topics:
+      qr-generation: qr-generation
+      bulk-url-creation: bulk-url-creation
+  qr:
+    storage-path: ./uploads/qr-codes

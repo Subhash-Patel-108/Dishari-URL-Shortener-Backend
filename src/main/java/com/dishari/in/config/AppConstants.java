@@ -31,4 +31,10 @@ public class AppConstants {
             "swagger",
             "actuator"
     );
+
+    // All fields any user can sort by
+    public static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "createdAt", "updatedAt", "expiresAt",
+            "clickCount", "title", "slug"
+    );
 }

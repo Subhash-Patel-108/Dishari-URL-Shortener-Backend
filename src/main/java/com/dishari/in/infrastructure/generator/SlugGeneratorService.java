@@ -7,8 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.Set;
-
 import static com.dishari.in.config.AppConstants.RESERVED_SLUGS;
 
 @Service
@@ -87,7 +85,7 @@ public class SlugGeneratorService {
     // ── Helpers ──────────────────────────────────────────────────
     private boolean isAvailable(String slug) {
         if (RESERVED_SLUGS.contains(slug.toLowerCase())) return false;
-        return !shortUrlRepository.existsBySlug(slug);
+        return !shortUrlRepository.existsBySlugAndDeletedAtIsNull(slug);
     }
 
     private String trimToLength(String slug, int length) {

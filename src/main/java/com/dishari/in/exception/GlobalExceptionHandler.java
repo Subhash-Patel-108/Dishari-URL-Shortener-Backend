@@ -29,6 +29,8 @@ public class GlobalExceptionHandler {
             IllegalArgumentException.class ,
             BadCredentialsException.class,
             InvalidVerificationToken.class ,
+            InvalidEnumValueException.class ,
+            InvalidSortFieldException.class ,
     })
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST , exception , request) ;
@@ -38,16 +40,26 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             EmailNotVerifiedException.class,
             LockedException.class,
+            UnauthorizedException.class ,
+            UserNotOwnException.class
     })
     public ResponseEntity<ErrorResponse> handleUnauthorized(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.UNAUTHORIZED , exception , request) ;
+    }
+
+    ///------ PAYMENT_REQUIRED : 402
+    @ExceptionHandler({
+            PlanUpgradeRequiredException.class ,
+            PlanExpiredException.class
+    })
+    public ResponseEntity<ErrorResponse> handlePaymentRequired(Exception ex, WebRequest request) {
+        return buildResponse(HttpStatus.PAYMENT_REQUIRED , ex , request) ;
     }
 
     ///------FORBIDDEN : 403
     @ExceptionHandler({
             AccessDeniedException.class ,
             AuthorizationDeniedException.class ,
-            PlanUpgradeRequiredException.class
     })
     public ResponseEntity<ErrorResponse> handleForbidden(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.FORBIDDEN , exception , request) ;
@@ -57,7 +69,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             UsernameNotFoundException.class ,
             RefreshTokenNotFoundException.class ,
-            UserNotFoundException.class
+            UserNotFoundException.class ,
+            UrlNotFoundException.class ,
     })
     public ResponseEntity<ErrorResponse> handleNotFound(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.NOT_FOUND, exception , request) ;
@@ -70,7 +83,6 @@ public class GlobalExceptionHandler {
             RedisOperationException.class ,
             ExternalAuthenticationException.class ,
             SlugAlreadyTakenException.class ,
-
     })
     public ResponseEntity<ErrorResponse> handleConflict(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.CONFLICT , exception , request) ;
@@ -141,6 +153,19 @@ public class GlobalExceptionHandler {
                 .path(getPath(request))
                 .build();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+
+    //General exceptions
+    public ResponseEntity<ErrorResponse> handleDateTimeParseException(Exception ex , WebRequest request) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.builder()
+                        .message("Invalid date format. Use ISO-8601: 2024-01-15T00:00:00Z")
+                        .error("INVALID_DATE_FORMAT")
+                        .status(400)
+                        .path(request.getDescription(false).replace("uri=" , ""))
+                        .timestamp(Instant.now().toString())
+                        .build());
     }
 
     //----- Common Method to build ErrorResponse

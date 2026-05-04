@@ -1,5 +1,6 @@
 package com.dishari.in.infrastructure.email;
 
+import com.dishari.in.web.dto.response.BulkErrorDetail;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.thymeleaf.context.Context;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -74,6 +76,21 @@ public class EmailService {
 
         sendHtmlMail(email , "Password Changed - Dishari", htmlContent);
         log.info("Password changed email sent to={}", email);
+    }
+
+    @Async
+    public void sendBulkUrlReport(String email , String userName , List<String> successUrls , List<BulkErrorDetail> failedUrls) {
+        Context thymeleafContext = new Context();
+        thymeleafContext.setVariable("userName", userName);
+        thymeleafContext.setVariable("userEmail", email);
+        thymeleafContext.setVariable("successUrls", successUrls);
+        thymeleafContext.setVariable("failedUrls", failedUrls);
+
+        // Process the HTML template (ensure the file is in src/main/resources/templates)
+        String htmlContent = templateEngine.process("bulk-url-report", thymeleafContext);
+        sendHtmlMail(email , "Bulk Url - Report" , htmlContent);
+
+        log.info("Bulk deployment report transmitted to {}", email);
     }
 
     private void sendHtmlMail(String to , String subject , String htmlContent) {

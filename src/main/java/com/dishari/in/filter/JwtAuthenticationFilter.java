@@ -21,6 +21,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.util.Date;
 import java.util.UUID;
 
 @Component
@@ -68,6 +70,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             .id(UUID.fromString(userId))
                             .role(UserRole.valueOf(role == null ? UserRole.ROLE_USER.name() : role))
                             .plan(Plan.valueOf(plan == null ? Plan.FREE.name() : plan))
+                            .hasPremium(claims.get("hasPremium", Boolean.class))
+                            .planExpiry(claims.get("planExpiry", Instant.class))
                             .enabled(true) // We trust the token's existence means they were enabled
                             .build();
 

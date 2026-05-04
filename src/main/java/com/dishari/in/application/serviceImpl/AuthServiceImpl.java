@@ -466,6 +466,8 @@ public class AuthServiceImpl implements AuthService {
                 .enabled(false)
                 .verified(false)
                 .frozen(false)
+                .hasPremium(false)
+                .planExpiry(null)
                 .socialProvider(SocialProvider.LOCAL)
                 .status(UserStatus.VERIFICATION_PENDING)
                 .avatarUrl(request.getAvatarUrl())

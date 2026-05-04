@@ -11,10 +11,11 @@ import java.util.UUID;
 
 @Repository
 public interface LinkRotationRepository extends JpaRepository<LinkRotation, UUID> {
-    // 1. Fetch one LinkRotation with all its destinations in a single query
     @Query("SELECT lr FROM LinkRotation lr " +
-            "LEFT JOIN FETCH lr.rotationDestinations " +
-            "WHERE lr.shortUrl.id = :shortUrlId")
-    Optional<LinkRotation> findByShortUrlIdWithDestinations(@Param("shortUrlId") UUID shortUrlId);
+            "LEFT JOIN FETCH lr.rotationDestinations rd " +
+            "WHERE lr.shortUrl.id = :shortUrlId " +
+            "AND (rd.active = true OR rd IS NULL) " +
+            "ORDER BY rd.position ASC")
+    Optional<LinkRotation> findActiveRotationWithDestinations(@Param("shortUrlId") UUID shortUrlId);
 
 }

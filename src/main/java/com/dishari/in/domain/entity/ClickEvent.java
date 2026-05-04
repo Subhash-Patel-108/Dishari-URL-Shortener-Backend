@@ -14,9 +14,12 @@ import java.util.UUID;
 @SuperBuilder
 @Getter
 @Setter
-@Table(name = "click_events" , indexes = {
-        @Index(name = "click_event_short_url_idx" , columnList = "short_url_id"),
-        @Index(name = "click_event_variant_idx" , columnList = "variant_id")
+@Table(name = "click_events", indexes = {
+        @Index(name = "idx_click_short_url", columnList = "short_url_id"),
+        @Index(name = "idx_click_clicked_at", columnList = "clicked_at"),
+        @Index(name = "idx_click_short_url_clicked_at", columnList = "short_url_id,clicked_at"),
+        @Index(name = "idx_click_country", columnList = "country"),
+        @Index(name = "idx_click_device", columnList = "device")
 })
 public class ClickEvent extends BaseEntity{
 
@@ -24,8 +27,8 @@ public class ClickEvent extends BaseEntity{
     @JoinColumn(name = "short_url_id" , nullable = false , updatable = false)
     private ShortUrl shortUrl ;
 
-    @Column(name = "ip_address" , nullable = false , length = 64)
-    private String ipAddress ;
+    @Column(name = "ip_hash" , nullable = false , length = 64)
+    private String ipHash ;  // SHA-256 hashed for privacy
 
     @Column(name = "user_agent" , nullable = false , length = 512)
     private String userAgent ;
@@ -36,9 +39,9 @@ public class ClickEvent extends BaseEntity{
     @Column(name = "os" , nullable = false)
     private String os ;
 
-    @Column(name = "device_type" , nullable = false)
+    @Column(name = "device" , nullable = false)
     @Enumerated(EnumType.STRING)
-    private DeviceType deviceType ;
+    private DeviceType device ;
 
     @Column(name = "country" , nullable = false , length = 2)
     private String country ;
@@ -46,11 +49,12 @@ public class ClickEvent extends BaseEntity{
     @Column(name = "city" , nullable = false)
     private String city ;
 
-    @Column(name = "referer" , length = 512)
-    private String referer ;
+    @Column(name = "referer_domain", length = 255)
+    private String refererDomain;   // pre-extracted domain
 
     @Column(name = "is_unique", nullable = false)
-    private boolean isUnique ;
+    @Builder.Default
+    private boolean unique = false;  // Bloom filter result
 
     @Column(name = "variant_id")
     private UUID variantId ;

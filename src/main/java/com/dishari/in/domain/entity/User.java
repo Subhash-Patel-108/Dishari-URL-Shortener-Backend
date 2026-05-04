@@ -78,6 +78,13 @@ public class User extends BaseEntity implements UserDetails {
     @Builder.Default
     private Plan plan = Plan.FREE ;
 
+    @Column(name = "has_premium" )
+    @Builder.Default
+    private boolean hasPremium = false ;
+
+    @Column(name = "plan_expired_at")
+    private Instant planExpiry ;
+
     @Column(name = "time_zone" , nullable = false)
     @Builder.Default
     private String timeZone = "UTC" ;

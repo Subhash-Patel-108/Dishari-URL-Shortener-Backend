@@ -4,5 +4,5 @@ public enum UrlStatus {
     ACTIVE ,
     INACTIVE ,
     DISABLED ,
-    FLAGGED
+    FLAGGED ,
 }

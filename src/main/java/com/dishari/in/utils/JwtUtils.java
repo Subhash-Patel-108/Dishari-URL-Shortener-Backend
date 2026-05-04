@@ -32,6 +32,8 @@ public class JwtUtils {
     private static final String CLAIM_ROLE = "role";
     private static final String CLAIM_USER_ID = "userId";
     private static final String CLAIM_PLAN = "plan" ;
+    private static final String CLAIM_HAS_PREMIUM = "hasPremium" ;
+    private static final String CLAIM_PLAN_EXPIRY = "planExpiry" ;
 
     private static final String AUTH_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
@@ -81,6 +83,8 @@ public class JwtUtils {
                 .claim(CLAIM_TYPE , ACCESS)
                 .claim(CLAIM_USER_ID , user.getId().toString())
                 .claim(CLAIM_PLAN , user.getPlan().name())
+                .claim(CLAIM_HAS_PREMIUM , user.isHasPremium())
+                .claim(CLAIM_PLAN_EXPIRY , user.getPlanExpiry())
                 .issuedAt(new Date())
                 .expiration(new Date(new Date().getTime() + jwtAccessTokenExpirationInMS))
                 .signWith(key)

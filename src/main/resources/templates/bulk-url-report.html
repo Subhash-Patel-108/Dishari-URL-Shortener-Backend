@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        /* Background removed for inbox floating effect */
+        body { margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+
+        .wrapper { width: 100%; table-layout: fixed; }
+
+        .email-card {
+            max-width: 500px;
+            margin: 20px auto;
+            background-color: #0a0a0a;
+            border: 1px solid #1a1a1a;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .header-banner { background-color: #111111; padding: 45px 40px 25px 40px; text-align: center; border-bottom: 1px solid #1a1a1a; }
+
+        .report-icon {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            padding: 12px;
+            border-radius: 14px;
+            display: inline-block;
+            margin-bottom: 15px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .content { padding: 40px; }
+        .title { color: #ffffff; font-size: 26px; font-weight: 700; margin: 0 0 12px 0; letter-spacing: -0.5px; text-align: center; }
+        .description { color: #a1a1aa; font-size: 15px; line-height: 1.6; margin-bottom: 30px; text-align: center; }
+
+        /* Stats Box */
+        .stats-grid {
+            display: table;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 10px 0;
+            margin-bottom: 32px;
+        }
+        .stat-box {
+            display: table-cell;
+            background: #111111;
+            border: 1px solid #222222;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            width: 50%;
+        }
+        .stat-label { font-size: 10px; color: #52525b; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: block; }
+        .stat-value { font-size: 22px; font-weight: 700; color: #ffffff; }
+
+        /* URL Reporting Sections */
+        .section-header { font-size: 11px; color: #71717a; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: block; }
+
+        .url-row {
+            background: #111111;
+            border: 1px solid #222222;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            text-align: left;
+        }
+        .url-link { color: #3b82f6; text-decoration: none; font-size: 13px; font-family: 'SF Mono', monospace; word-break: break-all; }
+
+        .error-msg { color: #ef4444; font-size: 12px; font-weight: 600; margin-top: 4px; display: block; }
+        .original-url-label { color: #52525b; font-size: 11px; display: block; margin-top: 2px; }
+
+        /* Footer */
+        .footer { padding: 30px 40px; background-color: #000000; border-top: 1px solid #1a1a1a; text-align: center; }
+        .footer-text { font-size: 11px; color: #3f3f46; line-height: 1.6; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <div class="email-card">
+        <div class="header-banner">
+            <div class="report-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <h1 class="title">Batch Report.</h1>
+        </div>
+
+        <div class="content">
+            <p class="description">
+                Hello <span style="color: #ffffff; font-weight: 600;" th:text="${userName}">User</span>,<br>
+                The Dishari processing engine has finished mapping your requested URLs. See the deployment summary below.
+            </p>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="stat-label">Successful</span>
+                    <span class="stat-value" style="color: #10b981;" th:text="${successUrls.size()}">0</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Failed</span>
+                    <span class="stat-value" style="color: #ef4444;" th:text="${failedUrls.size()}">0</span>
+                </div>
+            </div>
+
+            <!-- Successful URLs -->
+            <div th:if="${!successUrls.isEmpty()}" style="margin-bottom: 32px;">
+                <span class="section-header">Active Deployments</span>
+                <div th:each="url : ${successUrls}" class="url-row">
+                    <a th:href="${url}" class="url-link" th:text="${url}">https://dishari.in/short</a>
+                </div>
+            </div>
+
+            <!-- Failed URLs -->
+            <div th:if="${!failedUrls.isEmpty()}">
+                <span class="section-header" style="color: #ef4444;">Resolution Required</span>
+                <div th:each="error : ${failedUrls}" class="url-row" style="border-left: 3px solid #ef4444;">
+                    <span class="error-msg" th:text="${error.reason}">Slug already exists</span>
+                    <span class="original-url-label" th:text="${error.originalUrl}">http://example.com/long-link</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p class="footer-text">
+                Sent to <span style="color: #71717a;" th:text="${userEmail}">user@example.com</span><br>
+                This is an automated operational report from Dishari Network Systems.<br>
+                &copy; 2026 DISHARI OPS
+            </p>
+        </div>
+    </div>
+</div>
+</body>
+</html>
