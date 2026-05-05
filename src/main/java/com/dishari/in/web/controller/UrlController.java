@@ -263,6 +263,21 @@ public class UrlController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response) ;
     }
 
+    //Endpoint to get shortUrl raw clicks
+    @GetMapping("/{id}/clicks")
+    public ResponseEntity<PaginatedResponse<ClickEventResponse>> getRawClicks(
+            @RequestParam(name = "page" , defaultValue = "0") int page ,
+            @RequestParam(name = "size" , defaultValue = "50") int size ,
+            @RequestParam(name = "sortBy" , defaultValue = "createdAt") String sortBy ,
+            @RequestParam(name = "direction" , defaultValue = "DESC") String sortDirection ,
+            @AuthenticationPrincipal User principal ,
+            @PathVariable("id") String id
+    ) {
+        PaginatedResponse<ClickEventResponse> response = urlService.getRawClicks(page , size , sortBy , sortDirection , principal , id) ;
+        return ResponseEntity.status(HttpStatus.OK).body(response) ;
+    }
+
+
     // ── Safe Instant parser ───────────────────────────────────────
     private Instant parseInstant(String value, String fieldName) {
         if (value == null || value.isBlank()) return null;

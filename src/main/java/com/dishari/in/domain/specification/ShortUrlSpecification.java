@@ -109,7 +109,7 @@ public class ShortUrlSpecification {
     public static Specification<ShortUrl> hasGeoRule(String countryCode) {
         if (countryCode == null || countryCode.isBlank()) return null;
         return (root, query, cb) -> {
-            // Subquery — ShortUrl must have a GeoRule with this countryCode
+            // Subquery — ShortUrl must have a GeoRule with this country
             Subquery<Long> subquery = query.subquery(Long.class);
             Root<GeoRule> geoRoot = subquery.from(GeoRule.class);
             subquery.select(cb.literal(1L))
@@ -117,7 +117,7 @@ public class ShortUrlSpecification {
                             cb.equal(geoRoot.get("shortUrl").get("id"),
                                     root.get("id")),
                             cb.equal(
-                                    cb.upper(geoRoot.get("countryCode")),
+                                    cb.upper(geoRoot.get("country")),
                                     countryCode.toUpperCase()
                             )
                     );

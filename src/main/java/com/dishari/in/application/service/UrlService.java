@@ -33,4 +33,6 @@ public interface UrlService {
     MessageResponse createBulkUrl(User principal, CreateBulkUrlRequest request);
 
     BulkUrlResponse createShortUrlFormBulk(User user, BulkUrlRequest request);
+
+    PaginatedResponse<ClickEventResponse> getRawClicks(int page, int size, String sortBy, String sortDirection, User principal, String id);
 }

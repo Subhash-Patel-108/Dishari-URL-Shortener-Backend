@@ -174,7 +174,7 @@ public class UrlServiceImpl implements UrlService {
 
     /**
      * Get user urls
-     * @param filter // Url Request filter that contains (q, status, from, to, countryCode, deviceType, tag)
+     * @param filter // Url Request filter that contains (q, status, from, to, country, deviceType, tag)
      * @param principal // User entity
      * @param page // page number
      * @param size // size of page data
@@ -483,6 +483,28 @@ public class UrlServiceImpl implements UrlService {
         return BulkUrlResponse.fromEntity(savedShortUrl , baseUrl , false);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PaginatedResponse<ClickEventResponse> getRawClicks(int page, int size, String sortBy, String sortDirection, User principal, String id) {
+        ShortUrl shortUrl = shortUrlRepository.findByIdAndDeletedAtIsNull(parseUUID(id))
+                .orElseThrow(() -> new UrlNotFoundException("Short URL not found with id: " + id));
+
+        //First we check ownership for the shortUrl
+        if (!UrlSecurityService.isOwner(principal , shortUrl)) {
+            throw new UserNotOwnException("You don't have access to analytics for this URL.");
+        }
+
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        String safeSortBy = resolveSortField(sortBy , principal) ;
+        Pageable pageable = PageRequest.of(page , size , Sort.by(direction , safeSortBy)) ;
+
+        Page<ClickEvent> clickEventPage = clickEventRepository.findAllByShortUrl(shortUrl , pageable) ;
+
+        return PaginatedResponse.of(clickEventPage , ClickEventResponse::fromEntity);
+    }
+
+
     //Method that create shortUrl from bulk url request
     private ShortUrl buildShortUrlFromBulkUrlRequest(User user , BulkUrlRequest request) {
         //generator service that generate the short slug by using snowflake id generation technique
@@ -785,7 +807,7 @@ public class UrlServiceImpl implements UrlService {
                 .map(row -> {
                     long clicks = ((Number) row[2]).longValue();
                     return new CountryStats(
-                            String.valueOf(row[0]),              // countryCode
+                            String.valueOf(row[0]),              // country
                             String.valueOf(row[1]),              // countryName
                             clicks,
                             calculatePercentage(clicks, total)

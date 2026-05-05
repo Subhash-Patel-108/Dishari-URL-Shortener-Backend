@@ -1,8 +1,11 @@
 package com.dishari.in.domain.repository;
 
 import com.dishari.in.domain.entity.ClickEvent;
+import com.dishari.in.domain.entity.ShortUrl;
 import com.dishari.in.domain.enums.DeviceType;
 import com.dishari.in.web.dto.response.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -197,4 +200,6 @@ public interface ClickEventRepository extends JpaRepository<ClickEvent, UUID> {
             @Param("device") DeviceType device,
             @Param("browser") String browser);
 
+
+    Page<ClickEvent> findAllByShortUrl(ShortUrl shortUrl , Pageable pageable) ;
 }
