@@ -257,7 +257,7 @@ public class UrlController {
     )
     public ResponseEntity<MessageResponse> createBulkUrl(
             @AuthenticationPrincipal User principal ,
-            @Valid CreateBulkUrlRequest request
+            @RequestBody CreateBulkUrlRequest request
     ) {
         MessageResponse response = urlService.createBulkUrl(principal , request) ;
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response) ;

@@ -27,8 +27,7 @@ public class CreateBulkUrlProducer {
     public void publishBulkUrlEvent(User user, CreateBulkUrlRequest request) {
         // 1. Decouple from JPA Entity: Use userId instead of the full User object
         CreateBulkUrlEvent event = new CreateBulkUrlEvent(
-                user.getEmail(),
-                user.getUsername() ,
+                user,
                 request.urls()
         );
 

@@ -31,4 +31,6 @@ public interface UrlService {
     UrlAnalyticsResponse getAnalytics(User principal, String id, AnalyticsFilterRequest filter);
 
     MessageResponse createBulkUrl(User principal, CreateBulkUrlRequest request);
+
+    BulkUrlResponse createShortUrlFormBulk(User user, BulkUrlRequest request);
 }

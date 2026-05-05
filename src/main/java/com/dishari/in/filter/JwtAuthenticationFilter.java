@@ -64,7 +64,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (SecurityContextHolder.getContext().getAuthentication() == null) {
 
                     // 3. ZERO-DB LOOKUP: Create a transient User object
-                    // We don't call userRepository.findByEmail()!
+                    // We don't call userRepository.findByEmailAndDeletedAtIsNull()!
                     User principal = User.builder()
                             .email(email)
                             .id(UUID.fromString(userId))

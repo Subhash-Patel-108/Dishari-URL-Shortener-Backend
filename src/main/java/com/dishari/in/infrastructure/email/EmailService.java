@@ -1,10 +1,16 @@
 package com.dishari.in.infrastructure.email;
 
+import com.dishari.in.utils.CSVUtils;
 import com.dishari.in.web.dto.response.BulkErrorDetail;
+import com.dishari.in.web.dto.response.BulkSuccessDetail;
+import com.dishari.in.web.dto.response.BulkUrlResponse;
+import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -18,7 +24,11 @@ import java.util.List;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class EmailService {
+
+    private final CSVUtils csvUtils ;
+
     @Autowired
     private JavaMailSender javaMailSender ;
 
@@ -79,18 +89,47 @@ public class EmailService {
     }
 
     @Async
-    public void sendBulkUrlReport(String email , String userName , List<String> successUrls , List<BulkErrorDetail> failedUrls) {
-        Context thymeleafContext = new Context();
-        thymeleafContext.setVariable("userName", userName);
-        thymeleafContext.setVariable("userEmail", email);
-        thymeleafContext.setVariable("successUrls", successUrls);
-        thymeleafContext.setVariable("failedUrls", failedUrls);
+    public void sendBulkUrlReport(String email , String userName , List<BulkUrlResponse> successUrls , List<BulkErrorDetail> failedUrls) {
 
-        // Process the HTML template (ensure the file is in src/main/resources/templates)
-        String htmlContent = templateEngine.process("bulk-url-report", thymeleafContext);
-        sendHtmlMail(email , "Bulk Url - Report" , htmlContent);
 
-        log.info("Bulk deployment report transmitted to {}", email);
+        try {
+            MimeMessage message = javaMailSender.createMimeMessage();
+            // Set 'true' to indicate multipart message (needed for attachments)
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(email);
+            helper.setFrom(fromEmail);
+            helper.setSubject("Dishari Ops: Batch Deployment Summary");
+
+            int success = successUrls.size() ;
+            int failure = failedUrls.size() ;
+            int total = success + failure ;
+            // 1. Prepare HTML Content
+            Context context = new Context();
+            context.setVariable("userName", userName);
+            context.setVariable("userEmail", email);
+            context.setVariable("totalCount", total);
+            context.setVariable("successCount", success);
+            context.setVariable("failureCount", failure);
+
+            // Process the HTML template (ensure the file is in src/main/resources/templates)
+            String htmlContent = templateEngine.process("bulk-url-report", context);
+            helper.setText(htmlContent, true);
+
+            // 2. Generate and Attach CSV
+            byte[] csvBytes = csvUtils.generateBulkCsv(successUrls, failedUrls);
+            if (csvBytes.length > 0) {
+                String dateAndTime = LocalDateTime.now().format(DateTimeFormatter.ISO_DATE);
+                String fileName = "Dishari_Bulk_Report" + dateAndTime + ".csv" ;
+                helper.addAttachment(fileName, new ByteArrayResource(csvBytes));
+            }
+
+            javaMailSender.send(message);
+            log.info("Bulk report with CSV attachment sent to {}", email);
+
+        } catch (MessagingException e) {
+            log.error("Failed to send bulk report with attachment", e);
+        }
     }
 
     private void sendHtmlMail(String to , String subject , String htmlContent) {

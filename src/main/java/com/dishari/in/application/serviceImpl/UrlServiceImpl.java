@@ -73,7 +73,7 @@ public class UrlServiceImpl implements UrlService {
     @Override
     @Transactional
     public NormalUrlResponse createNormalUrl(String email, CreateNormalUrlRequest request) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found."));
+        User user = userRepository.findByEmailAndDeletedAtIsNull(email).orElseThrow(() -> new UserNotFoundException("User not found."));
 
         //Before generating new short url first we check that the user has already created the short url for the original long url
         Optional<ShortUrl> existingShortUrl = shortUrlRepository.findByUserAndOriginalUrlAndStatusAndDeletedAtIsNull(user, request.originalUrl(), UrlStatus.ACTIVE);
@@ -132,7 +132,7 @@ public class UrlServiceImpl implements UrlService {
     @Override
     @Transactional
     public CustomUrlResponse createCustomUrl(String email, CreateCustomUrlRequest request) {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailAndDeletedAtIsNull(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found."));
 
         // Validation
@@ -195,7 +195,7 @@ public class UrlServiceImpl implements UrlService {
         //It is a critical safety point so we must check user by using email
         String email = principal.getEmail() ;
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailAndDeletedAtIsNull(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found."));
 
         //----Sanitize inputs
@@ -450,8 +450,12 @@ public class UrlServiceImpl implements UrlService {
     @Override
     @Transactional
     public MessageResponse createBulkUrl(User principal, CreateBulkUrlRequest request) {
+        //Verify the user
+        User user = userRepository.findByEmailAndDeletedAtIsNull(principal.getEmail())
+                .orElseThrow(() -> new UserNotFoundException("User not found with email : " + principal.getEmail())) ;
+
         //Send event into the Kafka Messaging Queue
-        createBulkUrlProducer.publishBulkUrlEvent(principal , request);
+        createBulkUrlProducer.publishBulkUrlEvent(user , request);
 
         return MessageResponse.builder()
                 .message("Bulk URL creation request processed successfully. You will receive an email once processing is complete.")
@@ -460,6 +464,56 @@ public class UrlServiceImpl implements UrlService {
                 .build();
     }
 
+    @Override
+    @Transactional
+    //NOTE: For bulk url we generate qr code when the user want not at the time of shortUrl creation
+    public BulkUrlResponse createShortUrlFormBulk(User user, BulkUrlRequest request) {
+        //Before generating new short url first we check that the user has already created the short url for the original long url
+        Optional<ShortUrl> existingShortUrl = shortUrlRepository.findByUserAndOriginalUrlAndStatusAndDeletedAtIsNull(user, request.originalUrl(), UrlStatus.ACTIVE);
+        if (existingShortUrl.isPresent()) {
+            return BulkUrlResponse.fromEntity(existingShortUrl.get(), baseUrl , true);
+        }
+
+        ShortUrl shortUrl = buildShortUrlFromBulkUrlRequest(user , request) ;
+
+        //TODO: Check url safe or not(flagged)
+
+        ShortUrl savedShortUrl = shortUrlRepository.save(shortUrl) ;
+
+        return BulkUrlResponse.fromEntity(savedShortUrl , baseUrl , false);
+    }
+
+    //Method that create shortUrl from bulk url request
+    private ShortUrl buildShortUrlFromBulkUrlRequest(User user , BulkUrlRequest request) {
+        //generator service that generate the short slug by using snowflake id generation technique
+        String slug = slugGeneratorService.generateSlug() ;
+
+        ShortUrl shortUrl = ShortUrl.builder()
+                .originalUrl(request.originalUrl())
+                .slug(slug)
+                .title(request.title())
+                .user(user)
+                .expiresAt(request.expiresAt())
+                .maxClicks(request.maxClicks())
+                .status(UrlStatus.ACTIVE)
+                .build();
+
+        //now we are set the password if user want to set the password
+        if (request.password() != null && !request.password().trim().isEmpty()) {
+            shortUrl.setHashedPassword(passwordEncoder.encode(request.password()));
+        }
+
+        //We store utm data if the utm in request is not null
+        if (request.utm() != null) {
+            shortUrl.setUtmSource(request.utm().utmSource());
+            shortUrl.setUtmMedium(request.utm().utmMedium());
+            shortUrl.setUtmCampaign(request.utm().utmCampaign());
+            shortUrl.setUtmContent(request.utm().utmContent());
+            shortUrl.setUtmTerm(request.utm().utmTerm());
+        }
+
+        return shortUrl ;
+    }
 
     //Method that is used to create shortUrl called by Kafka Event
 
@@ -636,7 +690,7 @@ public class UrlServiceImpl implements UrlService {
             case "createdat"  -> "createdAt";
             case "updatedat"  -> "updatedAt";
             case "expiresat"  -> "expiresAt";
-            case "clickcount" -> "clickCount";
+            case "clickcount" -> "maxClicks";
             case "title"      -> "title";
             case "slug"       -> "slug";
             default           -> {

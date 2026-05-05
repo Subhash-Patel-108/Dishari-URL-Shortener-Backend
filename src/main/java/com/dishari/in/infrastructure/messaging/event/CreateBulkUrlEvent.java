@@ -1,5 +1,7 @@
 package com.dishari.in.infrastructure.messaging.event;
 
+import com.dishari.in.domain.entity.User;
+import com.dishari.in.web.dto.request.BulkUrlRequest;
 import com.dishari.in.web.dto.request.CreateNormalUrlRequest;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
@@ -16,7 +18,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CreateBulkUrlEvent {
-    private String userEmail;
-    private String userName ;
-    private List<CreateNormalUrlRequest> urls;
+    private User user ;
+    private List<BulkUrlRequest> urls;
 }

@@ -2,7 +2,6 @@ package com.dishari.in.web.dto.response;
 
 import com.dishari.in.domain.entity.ShortUrl;
 import com.dishari.in.domain.enums.UrlStatus;
-import com.dishari.in.web.dto.request.UrlUtmRequest;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -19,7 +18,7 @@ public record NormalUrlResponse(
 
         Instant createdAt,
         Instant expiresAt,               // ← this is the exact date/time when URL becomes invalid
-        Long clickCount,
+        Long maxClicks,
         String qrCodeUrl,
         boolean isPasswordProtected,
         boolean isActive ,
@@ -54,7 +53,7 @@ public record NormalUrlResponse(
                 ),
                 shortUrl.getCreatedAt(),
                 shortUrl.getExpiresAt(),
-                shortUrl.getClickCount(),
+                shortUrl.getMaxClicks(),
                 shortUrl.getQrCodeUrl(),
                 shortUrl.getHashedPassword() != null,           // password protected?
                 shortUrl.getStatus() == UrlStatus.ACTIVE,        // still active?

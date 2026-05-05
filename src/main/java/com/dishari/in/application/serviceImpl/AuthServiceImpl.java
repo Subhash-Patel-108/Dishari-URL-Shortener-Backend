@@ -91,7 +91,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public LoginResponse login(HttpServletRequest servletRequest, HttpServletResponse servletResponse, UserLoginRequest request) {
         //1. fetch the user by email
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailAndDeletedAtIsNull(request.getEmail())
                 .orElseThrow(() -> new BadCredentialsException("Invalid Email or Password"));
 
         //2. check provider type (if social provider then user can't log in with password )
@@ -283,7 +283,7 @@ public class AuthServiceImpl implements AuthService {
             throw new TooManyRequestException("Too many request. Try after sometime.") ;
         }
 
-        Optional<User> userOpt = userRepository.findByEmail(email);
+        Optional<User> userOpt = userRepository.findByEmailAndDeletedAtIsNull(email);
 
         if (userOpt.isEmpty()) {
             // Silent return — don't reveal email doesn't exist
@@ -347,7 +347,7 @@ public class AuthServiceImpl implements AuthService {
             throw new TooManyRequestException("Too many request. Try after sometime.") ;
         }
 
-        Optional<User> userOpt = userRepository.findByEmail(email) ;
+        Optional<User> userOpt = userRepository.findByEmailAndDeletedAtIsNull(email) ;
 
         if (userOpt.isEmpty()){
             return buildMessageResponse(HttpStatus.OK , "If this email is registered, a verification link has been sent.") ;
@@ -375,7 +375,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public UserResponse getUser(String email) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found.")) ;
+        User user = userRepository.findByEmailAndDeletedAtIsNull(email).orElseThrow(() -> new UserNotFoundException("User not found.")) ;
 
         return UserResponse.fromEntity(user);
     }
@@ -383,7 +383,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public UserResponse updateUser(String email, UserUpdateRequest request) {
-        Optional<User> userOpt = userRepository.findByEmail(email) ;
+        Optional<User> userOpt = userRepository.findByEmailAndDeletedAtIsNull(email) ;
         if (userOpt.isEmpty()) {
             throw new UserNotFoundException("User not found.") ;
         }
