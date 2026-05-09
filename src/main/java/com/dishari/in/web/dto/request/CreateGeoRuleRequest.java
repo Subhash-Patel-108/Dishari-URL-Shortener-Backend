@@ -16,7 +16,7 @@ public record CreateGeoRuleRequest(
         String  destinationUrl ,
 
         @NotNull(message = "Priority is required")
-        int priority ,
+        Integer priority ,
 
         @NotNull(message = "Is default is required")
         boolean isDefault

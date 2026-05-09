@@ -9,6 +9,7 @@ import com.dishari.in.domain.specification.ShortUrlSpecification;
 import com.dishari.in.exception.*;
 import com.dishari.in.infrastructure.generator.SlugGeneratorService;
 import com.dishari.in.infrastructure.messaging.producer.CreateBulkUrlProducer;
+import com.dishari.in.infrastructure.messaging.producer.LinkMetadataEventProducer;
 import com.dishari.in.infrastructure.messaging.producer.QrGenerationEventProducer;
 import com.dishari.in.infrastructure.qr.QrCodeGeneratorService;
 import com.dishari.in.infrastructure.qr.QrCodeStorageService;
@@ -54,6 +55,7 @@ public class UrlServiceImpl implements UrlService {
     private final QrCodeStorageService qrCodeStorageService;
     private final ClickEventRepository clickEventRepository ;
     private final CreateBulkUrlProducer createBulkUrlProducer ;
+    private final LinkMetadataEventProducer linkMetadataEventProducer ;
 
     private static final int MAX_PAGE_SIZE = 50;
     private static final String DEFAULT_SORT_FIELD = "createdAt";
@@ -113,11 +115,13 @@ public class UrlServiceImpl implements UrlService {
         ShortUrl savedShortUrl = shortUrlRepository.save(shortUrl) ;
 
         //NOTE: If user has premium than qr code will be generated
-
         if (premiumPlans.contains(user.getPlan())) {
             String shortUrlString = baseUrl + "/" + savedShortUrl.getSlug() ;
             qrGenerationEventProducer.publishQrGenerationEvent(savedShortUrl.getId() , savedShortUrl.getSlug() , shortUrlString  , savedShortUrl.getUser().getId() ,300 , "#000000" , "#FFFFFF" , null , "PNG");
         }
+
+        //Publish a link metadata event to create link metadata
+        linkMetadataEventProducer.publishLinkMetadataEvent(request.originalUrl());
 
         return NormalUrlResponse.fromEntity(shortUrl, baseUrl , false);
     }
@@ -160,6 +164,8 @@ public class UrlServiceImpl implements UrlService {
             linkRotation = storeLinkRotation(savedShortUrl, request.linkRotation());
         }
 
+        //Publish a link metadata event to create link metadata
+        linkMetadataEventProducer.publishLinkMetadataEvent(request.originalUrl());
         // 3. Return the rich response
         return CustomUrlResponse.fromEntity(
                 savedShortUrl,
@@ -628,7 +634,7 @@ public class UrlServiceImpl implements UrlService {
                 .countryCode(request.countryCode())
                 .destinationUrl(request.destinationUrl())
                 .isDefault(request.isDefault())
-                .priority(request.priority())
+                .priority(request.priority() != null ? request.priority() : 1)
                 .build() ;
     }
 
@@ -690,8 +696,8 @@ public class UrlServiceImpl implements UrlService {
         return RotationDestination.builder()
                 .linkRotation(linkRotation)
                 .destinationUrl(request.destinationUrl())
-                .weight(request.weight())
-                .position(request.position())
+                .weight(request.weight() == null ? 1 : request.weight())
+                .position(request.position() == null ? 1 : request.position())
                 .activeFrom(request.activeFrom())
                 .activeTo(request.activeTo())
                 .active(request.active())

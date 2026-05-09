@@ -1,6 +1,8 @@
 package com.dishari.in.config;
 
+import com.dishari.in.infrastructure.messaging.event.ClickEventGenerationEvent;
 import com.dishari.in.infrastructure.messaging.event.CreateBulkUrlEvent;
+import com.dishari.in.infrastructure.messaging.event.LinkMetadataEvent;
 import com.dishari.in.infrastructure.messaging.event.QrGenerationEvent;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -45,6 +47,22 @@ public class KafkaConfig {
                 .build();
     }
 
+    @Bean
+    public NewTopic clickEventTopic() {
+        return TopicBuilder.name("click-event-generation")
+                .partitions(5)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic linkMetadataTopic() {
+        return TopicBuilder.name("link-metadata-generation")
+                .partitions(5)
+                .replicas(1)
+                .build();
+    }
+
     // ── Producer ─────────────────────────────────────────────────
     @Bean
     public ProducerFactory<String, QrGenerationEvent> qrProducerFactory() {
@@ -71,6 +89,28 @@ public class KafkaConfig {
         return new DefaultKafkaProducerFactory<>(config);
     }
 
+    @Bean
+    public ProducerFactory<String, ClickEventGenerationEvent> clickEventProducerFactory() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
+        config.put(ProducerConfig.ACKS_CONFIG, "all");
+        config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        return new DefaultKafkaProducerFactory<>(config);
+    }
+
+    @Bean
+    public ProducerFactory<String, LinkMetadataEvent> linkMetadataEventProducerFactory() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JacksonJsonSerializer.class);
+        config.put(ProducerConfig.ACKS_CONFIG, "all");
+        config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        return new DefaultKafkaProducerFactory<>(config);
+    }
+
 
     @Bean(name = "defaultRetryTopicKafkaTemplate")
     public KafkaTemplate<String, QrGenerationEvent> qrKafkaTemplate() {
@@ -80,6 +120,16 @@ public class KafkaConfig {
     @Bean
     public KafkaTemplate<String, CreateBulkUrlEvent> bulkKafkaTemplate() {
         return new KafkaTemplate<>(bulkProducerFactory());
+    }
+
+    @Bean
+    public KafkaTemplate<String, ClickEventGenerationEvent> clickEventKafkaTemplate() {
+        return new KafkaTemplate<>(clickEventProducerFactory());
+    }
+
+    @Bean
+    public KafkaTemplate<String, LinkMetadataEvent> linkMetadataEventKafkaTemplate() {
+        return new KafkaTemplate<>(linkMetadataEventProducerFactory());
     }
 
     // ── Consumer ─────────────────────────────────────────────────
@@ -94,10 +144,8 @@ public class KafkaConfig {
                 JacksonJsonDeserializer.class);
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         // Only deserialize our trusted package
-        config.put(JacksonJsonDeserializer.TRUSTED_PACKAGES,
-                "com.dishari.in.infrastructure.messaging.event");
-        config.put(JacksonJsonDeserializer.VALUE_DEFAULT_TYPE,
-                QrGenerationEvent.class.getName());
+        config.put(JacksonJsonDeserializer.TRUSTED_PACKAGES, "com.dishari.in.infrastructure.messaging.event");
+        config.put(JacksonJsonDeserializer.VALUE_DEFAULT_TYPE, QrGenerationEvent.class.getName());
         return new DefaultKafkaConsumerFactory<>(config);
     }
 
@@ -118,11 +166,37 @@ public class KafkaConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, QrGenerationEvent>
-    qrKafkaListenerContainerFactory() {
+    public ConsumerFactory<String, ClickEventGenerationEvent> clickEventConsumeFactory() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        config.put(ConsumerConfig.GROUP_ID_CONFIG, "click-event-group");
+        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JacksonJsonDeserializer.class);
+        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        // Only deserialize our trusted package
+        config.put(JacksonJsonDeserializer.TRUSTED_PACKAGES, "com.dishari.in.infrastructure.messaging.event");
+        config.put(JacksonJsonDeserializer.VALUE_DEFAULT_TYPE, ClickEventGenerationEvent.class.getName());
+        return new DefaultKafkaConsumerFactory<>(config);
+    }
 
-        ConcurrentKafkaListenerContainerFactory<String, QrGenerationEvent>
-                factory = new ConcurrentKafkaListenerContainerFactory<>();
+    @Bean
+    public ConsumerFactory<String, LinkMetadataEvent> linkMetadataEventConsumeFactory() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        config.put(ConsumerConfig.GROUP_ID_CONFIG, "link-metadata-group");
+        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                JacksonJsonDeserializer.class);
+        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        // Only deserialize our trusted package
+        config.put(JacksonJsonDeserializer.TRUSTED_PACKAGES, "com.dishari.in.infrastructure.messaging.event");
+        config.put(JacksonJsonDeserializer.VALUE_DEFAULT_TYPE, LinkMetadataEvent.class.getName());
+        return new DefaultKafkaConsumerFactory<>(config);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, QrGenerationEvent> qrKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, QrGenerationEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(qrConsumerFactory());
         factory.setConcurrency(3);
         return factory;
@@ -132,6 +206,22 @@ public class KafkaConfig {
     public ConcurrentKafkaListenerContainerFactory<String, CreateBulkUrlEvent> bulkKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, CreateBulkUrlEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(bulkConsumerFactory());
+        factory.setConcurrency(5);
+        return factory;
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, ClickEventGenerationEvent> clickEventKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, ClickEventGenerationEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(clickEventConsumeFactory());
+        factory.setConcurrency(5);
+        return factory;
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, LinkMetadataEvent> linkMetadataEventKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, LinkMetadataEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(linkMetadataEventConsumeFactory());
         factory.setConcurrency(5);
         return factory;
     }

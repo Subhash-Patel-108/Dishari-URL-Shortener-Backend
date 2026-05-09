@@ -5,5 +5,6 @@ public enum DeviceType {
     MOBILE ,
     PHONE,
     TABLET ,
-    BOT
+    BOT ,
+    UNKNOWN
 }

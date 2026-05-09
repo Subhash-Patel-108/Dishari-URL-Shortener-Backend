@@ -54,7 +54,7 @@ public class AuthServiceImpl implements AuthService {
     private final EmailService emailService ;
     private final ForgotPasswordCacheService forgotPasswordCacheService ;
 
-    @Value("${password.pepper}")
+    @Value("${app.pepper.password-pepper}")
     private String pepper ;
 
     @Override // Method for user registration

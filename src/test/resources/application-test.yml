@@ -1,0 +1,4 @@
+app:
+  geoip:
+    country-db-path: src/test/resources/geoip/GeoLite2-Country.mmdb
+    city-db-path:    src/test/resources/geoip/GeoLite2-City.mmdb

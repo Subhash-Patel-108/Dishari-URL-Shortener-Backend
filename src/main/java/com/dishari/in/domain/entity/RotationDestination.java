@@ -43,4 +43,25 @@ public class RotationDestination extends BaseEntity{
     @Builder.Default
     private boolean active = true ;
 
+    public boolean isActiveAt(LocalTime currentTime) {
+        if (!active) return false;
+        if (activeFrom == null && activeTo == null) return true; // Always active
+
+        return isWithinTimeWindow(currentTime);
+    }
+
+    private boolean isWithinTimeWindow(LocalTime now) {
+        if (activeFrom == null || activeTo == null || now == null) {
+            return false;
+        }
+
+        // Normal window: 08:00 to 16:00
+        if (!activeFrom.isAfter(activeTo)) {
+            return !now.isBefore(activeFrom) && !now.isAfter(activeTo);
+        }
+
+        // Overnight window: 22:00 to 06:00
+        return !now.isBefore(activeFrom) || !now.isAfter(activeTo);
+    }
+
 }

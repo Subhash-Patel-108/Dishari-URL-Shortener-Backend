@@ -31,6 +31,7 @@ public class GlobalExceptionHandler {
             InvalidVerificationToken.class ,
             InvalidEnumValueException.class ,
             InvalidSortFieldException.class ,
+            UUIDParsingException.class ,
     })
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST , exception , request) ;

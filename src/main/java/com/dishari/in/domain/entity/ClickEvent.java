@@ -43,8 +43,11 @@ public class ClickEvent extends BaseEntity{
     @Enumerated(EnumType.STRING)
     private DeviceType device ;
 
-    @Column(name = "country" , nullable = false , length = 2)
+    @Column(name = "country" , nullable = false , length = 3)
     private String country ;
+
+    @Column(name = "country_name" , nullable = false , length = 100)
+    private String countryName ;
 
     @Column(name = "city" , nullable = false)
     private String city ;

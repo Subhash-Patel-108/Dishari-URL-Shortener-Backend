@@ -74,6 +74,8 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: update
+      id:
+        new_generator_mappings: true
     show-sql: false
     properties:
       hibernate:
@@ -113,19 +115,49 @@ password:
   pepper: ${PASSWORD_PEPPER}
 
 app:
+  pepper:
+    password-pepper: ${PASSWORD_PEPPER}
+    ip-pepper: ${IP_PEPPER}
+  geoip:
+    country-db-path: ${GEOIP_COUNTRY_DB:src/main/resources/geoip/GeoLite2-Country.mmdb}
+    city-db-path: ${GEOIP_CITY_DB:src/main/resources/geoip/GeoLite2-City.mmdb}
   snowflake:
     node-id: ${SNOWFLAKE_NODE_ID:1}   # unique per instance — set via env in prod
     epoch: 1700000000000              # custom epoch — Nov 14 2023 (ms)
   slug:
     default-length: ${SLUG_DEFAULT_LENGTH:7}
     max-retry-attempts: ${SLUG_MAX_RETRY_ATTEMPTS:3}
-  base-url: ${APP_BASE_URL:http://localhost:8080}
+  base-url: ${BACKEND_BASE_URL:http://localhost:8080}
+  frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:5718}
   kafka:
     groups:
       qr-generation: qr-generation-group
       bulk-creation: bulk-url-group
+      click-event-generation: click-event-group
+      link-metadata-generation: link-metadata-group
     topics:
       qr-generation: qr-generation
       bulk-url-creation: bulk-url-creation
+      click-event-generation: click-event-generation
+      link-metadata-generation: link-metadata-generation
   qr:
     storage-path: ./uploads/qr-codes
+    base-url: http://localhost:8080
+
+
+playwright:
+  timeout: 10000
+  headless: true
+  max-concurrent: 3
+
+# Connection pool settings
+http:
+  connection:
+    timeout: 5000
+    max-connections: 20
+    max-connections-per-route: 10
+
+# Logging
+logging:
+  level:
+    com.dishari.in.infrastructure.metadata: DEBUG

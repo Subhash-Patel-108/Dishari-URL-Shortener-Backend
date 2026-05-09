@@ -4,9 +4,12 @@ import com.dishari.in.exception.RedisOperationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -86,6 +89,27 @@ public class RedisService {
             redisTemplate.opsForValue().setIfAbsent(key, value, ttl);
         } catch (Exception ex) {
             log.error("Redis SETNX failed for key={} : {}", key, ex.getMessage());
+        }
+    }
+
+    /**
+     * Executes a Lua script for atomic operations.
+     * * @param script   The Lua script string.
+     * @param keys     List of keys involved in the script.
+     * @param args     Arguments for the script (e.g., TTL).
+     * @return List of strings returned by the script.
+     */
+    public List<String> executeScript(String script, List<String> keys, Object... args) {
+        try {
+            DefaultRedisScript<List> redisScript = new DefaultRedisScript<>();
+            redisScript.setScriptText(script);
+            redisScript.setResultType(List.class);
+
+            // Spring's RedisTemplate handles the serialization and execution
+            return redisTemplate.execute(redisScript, keys, args);
+        } catch (Exception ex) {
+            log.error("Redis Lua script execution failed: {}", ex.getMessage());
+            return Collections.emptyList();
         }
     }
 }

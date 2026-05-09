@@ -2,6 +2,9 @@ package com.dishari.in.config;
 
 import io.lettuce.core.api.StatefulConnection;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -65,5 +68,15 @@ public class RedisConfig {
         template.setHashValueSerializer(serializer);
         template.afterPropertiesSet();
         return template;
+    }
+
+    @Bean
+    public RedissonClient redissonClient() {
+        Config config = new Config();
+        // Use "redis://" for non-SSL or "rediss://" for SSL
+        String address = String.format("redis://%s:%d", host, port);
+        config.useSingleServer().setAddress(address);
+
+        return Redisson.create(config);
     }
 }

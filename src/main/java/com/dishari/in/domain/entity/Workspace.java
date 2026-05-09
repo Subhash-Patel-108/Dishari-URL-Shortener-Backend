@@ -35,7 +35,7 @@ public class Workspace extends BaseEntity {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id" , nullable = false , updatable = false)
-    private WorkspaceMember owner ;
+    private User owner ;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "plan" , nullable = false)

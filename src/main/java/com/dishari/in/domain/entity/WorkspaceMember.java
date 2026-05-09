@@ -43,7 +43,7 @@ public class WorkspaceMember extends BaseEntity{
     @Enumerated(EnumType.STRING)
     @Column(name = "status" , nullable = false)
     @Builder.Default
-    private WorkspaceMemberStatus status = WorkspaceMemberStatus.INVITED ;
+    private WorkspaceMemberStatus status = WorkspaceMemberStatus.PENDING ;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "invited_by_id" , updatable = false)

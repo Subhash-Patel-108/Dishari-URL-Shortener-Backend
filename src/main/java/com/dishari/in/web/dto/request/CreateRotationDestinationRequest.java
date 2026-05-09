@@ -6,9 +6,9 @@ import java.time.LocalTime;
 
 public record CreateRotationDestinationRequest(
         String destinationUrl ,
-        int weight ,
-        LocalTime activeFrom ,
-        LocalTime activeTo ,
-        int position ,
-        boolean active
+        Integer weight ,
+        LocalTime activeFrom , // 00:00:00
+        LocalTime activeTo , // - 23:59:59
+        Integer position ,
+        Boolean active
 ) {}
