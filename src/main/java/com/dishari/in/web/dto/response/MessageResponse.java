@@ -16,4 +16,10 @@ public class MessageResponse {
     private String message;
     private int status;
     private String path;
+
+    public MessageResponse(String message , int status) {
+        this.timestamp = Instant.now();
+        this.message = message;
+        this.status = status;
+    }
 }

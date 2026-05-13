@@ -28,18 +28,19 @@ public class JwtUtils {
     private final long jwtRefreshTokenExpirationInMS ;
     private SecretKey key ;
 
-    private static final String CLAIM_TYPE = "type";
-    private static final String CLAIM_ROLE = "role";
-    private static final String CLAIM_USER_ID = "userId";
-    private static final String CLAIM_PLAN = "plan" ;
-    private static final String CLAIM_HAS_PREMIUM = "hasPremium" ;
-    private static final String CLAIM_PLAN_EXPIRY = "planExpiry" ;
+    public static final String CLAIM_TYPE = "type";
+    public static final String CLAIM_ROLE = "role";
+    public static final String CLAIM_USER_ID = "userId";
+    public static final String CLAIM_USERNAME = "username";
+    public static final String CLAIM_PLAN = "plan" ;
+    public static final String CLAIM_HAS_PREMIUM = "hasPremium" ;
+    public static final String CLAIM_PLAN_EXPIRY = "planExpiry" ;
 
     private static final String AUTH_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
 
-    private static final String ACCESS = "accessToken";
-    private static final String REFRESH = "refreshToken";
+    public static final String ACCESS = "accessToken";
+    public static final String REFRESH = "refreshToken";
 
     public JwtUtils(
             @Value("${jwt.secret}") String jwtSecret ,
@@ -82,6 +83,7 @@ public class JwtUtils {
                 .claim(CLAIM_ROLE , role)
                 .claim(CLAIM_TYPE , ACCESS)
                 .claim(CLAIM_USER_ID , user.getId().toString())
+                .claim(CLAIM_USERNAME, user.getName())
                 .claim(CLAIM_PLAN , user.getPlan().name())
                 .claim(CLAIM_HAS_PREMIUM , user.isHasPremium())
                 .claim(CLAIM_PLAN_EXPIRY , user.getPlanExpiry())

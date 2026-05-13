@@ -21,7 +21,8 @@ import java.time.Instant;
         @Index(name = "idx_ws_member_lookup", columnList = "workspace_id, user_id", unique = true),
         @Index(name = "idx_user_ws_membership", columnList = "user_id") ,
         @Index(name = "idx_workspace_members", columnList = "workspace_id") ,
-        @Index(name = "idx_ws_member_status", columnList = "workspace_id, status")
+        @Index(name = "idx_ws_member_status", columnList = "workspace_id, status") ,
+        @Index(name = "idx_ws_member_joined_at" , columnList = "workspace_id, joined_at")
 })
 @Entity
 public class WorkspaceMember extends BaseEntity{
@@ -56,7 +57,6 @@ public class WorkspaceMember extends BaseEntity{
     @Column(name = "joined_at")
     private Instant joinedAt ;
 
-    @SoftDelete(strategy = SoftDeleteType.TIMESTAMP)
     @Column(name = "removed_at")
     private Instant removedAt ;
 }

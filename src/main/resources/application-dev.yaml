@@ -76,7 +76,7 @@ spring:
       ddl-auto: update
       id:
         new_generator_mappings: true
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
         format_sql: true

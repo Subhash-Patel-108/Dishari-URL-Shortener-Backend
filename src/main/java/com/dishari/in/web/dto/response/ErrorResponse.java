@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 
 public class ErrorResponse {
-
+    private boolean success ;
     private String timestamp ;
     private int status ;
     private String message ;

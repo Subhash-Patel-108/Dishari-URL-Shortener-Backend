@@ -33,7 +33,7 @@ public class Workspace extends BaseEntity {
     @Column(name = "description" , length = 500)
     private String description ;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id" , nullable = false , updatable = false)
     private User owner ;
 
@@ -44,7 +44,7 @@ public class Workspace extends BaseEntity {
 
     @Column(name = "is_personal")
     @Builder.Default
-    private boolean personal = true ;
+    private boolean personal = false ;
 
     // --- Branding & Customization ---
     @Column(name = "logo_url" , length = 2048)
@@ -56,11 +56,14 @@ public class Workspace extends BaseEntity {
     // --- Governance ---
     @Column(name = "is_enabled" , nullable = false)
     @Builder.Default
-    private boolean enabled = false ;
+    private boolean enabled = true ;
+
+    @Column(name = "link_count")
+    @Builder.Default
+    private long linkCount = 0;
 
     @Version
     private Long version ;
 
-    @SoftDelete(strategy = SoftDeleteType.TIMESTAMP)
     private Instant deletedAt ;
 }

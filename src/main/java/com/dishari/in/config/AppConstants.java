@@ -14,6 +14,7 @@ public class AppConstants {
             "/{slug}" ,
             "/{slug}/unlock",
             "/{slug}/preview",
+            "/api/v1/workspaces/member/{memberId}/verify" ,
             "/v3/api-docs" ,
             "/v3/api-docs/**" ,
             "/swagger-ui.html" ,

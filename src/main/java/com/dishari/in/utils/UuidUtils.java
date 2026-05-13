@@ -1,5 +1,8 @@
 package com.dishari.in.utils;
 
+import com.dishari.in.exception.UUIDParsingException;
+import org.springframework.security.core.parameters.P;
+
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
@@ -38,6 +41,15 @@ public final class UuidUtils {
             return fromBytes(value);
         } catch (Exception ex) {
             return null;
+        }
+    }
+
+    //---Method to parse String into UUID
+    public static UUID parse(String uuid) {
+        try {
+            return UUID.fromString(uuid) ;
+        } catch (Exception ex) {
+            throw new UUIDParsingException("Invalid UUID format.") ;
         }
     }
 }

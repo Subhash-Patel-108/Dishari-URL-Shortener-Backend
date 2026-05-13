@@ -21,6 +21,7 @@ import org.thymeleaf.context.Context;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @Slf4j
@@ -130,6 +131,34 @@ public class EmailService {
         } catch (MessagingException e) {
             log.error("Failed to send bulk report with attachment", e);
         }
+    }
+
+    @Async
+    public void sendInvitationMail(String email, String username, String token, String workspaceName, String invitedBy, String role) {
+        // 1. Construct the absolute link
+        String workspaceLink = frontendBaseUrl + "/workspace/join?token=" + token;
+
+        // 2. Format date (Use a standard professional format)
+        String invitedAt = DateTimeFormatter.ofPattern("MMM dd, yyyy").format(LocalDateTime.now());
+
+        Context context = new Context(Locale.ENGLISH);
+
+        // Match these exactly to the th:text="${...}" in your HTML
+        context.setVariable("userName", username);          // Was memberName
+        context.setVariable("invitedByName", invitedBy);     // Was ownerName
+        context.setVariable("workspaceName", workspaceName);
+        context.setVariable("role", role);
+        context.setVariable("invitedAt", invitedAt);         // Was joinedAt
+        context.setVariable("invitationLink", workspaceLink); // Was workspaceLink
+        context.setVariable("userEmail", email);            // Was memberEmail
+
+        // SDE-3 Tip: Add the logo URL here as well
+//        context.setVariable("logoUrl", "https://your-cdn.com/logo.png");
+
+        String htmlContent = templateEngine.process("workspace-invitation", context);
+        sendHtmlMail(email, "Join " + workspaceName + " on SnapURL", htmlContent);
+
+        log.info("Workspace invitation email dispatched for workspace={} to={}", workspaceName, email);
     }
 
     private void sendHtmlMail(String to , String subject , String htmlContent) {

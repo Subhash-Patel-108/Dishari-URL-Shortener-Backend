@@ -48,14 +48,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Claims claims = jwtUtils.extractClaims(token) ;
 
                 // 2. Validate Type (Must be Access Token)
-                if (!"accessToken".equals(claims.get("type" , String.class))) {
+                if (!JwtUtils.ACCESS.equals(claims.get(JwtUtils.CLAIM_TYPE , String.class))) {
                     throw new JwtAuthenticationException("Invalid token type");
                 }
 
                 String email = claims.getSubject();
-                String role = claims.get("role", String.class);
-                String userId = claims.get("userId", String.class);
-                String plan = claims.get("plan", String.class);
+                String role = claims.get(JwtUtils.CLAIM_ROLE, String.class);
+                String userId = claims.get(JwtUtils.CLAIM_USER_ID, String.class);
+                String plan = claims.get( JwtUtils.CLAIM_PLAN, String.class);
+                String username = claims.get( JwtUtils.CLAIM_USERNAME, String.class) ;
 
                 if (email == null || userId == null) {
                     throw new JwtAuthenticationException("Missing email or user id");
@@ -68,6 +69,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     User principal = User.builder()
                             .email(email)
                             .id(UUID.fromString(userId))
+                            .name(username)
                             .role(UserRole.valueOf(role == null ? UserRole.ROLE_USER.name() : role))
                             .plan(Plan.valueOf(plan == null ? Plan.FREE.name() : plan))
                             .hasPremium(claims.get("hasPremium", Boolean.class))

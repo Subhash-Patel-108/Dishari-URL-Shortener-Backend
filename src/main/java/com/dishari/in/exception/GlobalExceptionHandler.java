@@ -19,6 +19,7 @@ import java.nio.file.AccessDeniedException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 @RestControllerAdvice
 @Slf4j
@@ -61,6 +62,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             AccessDeniedException.class ,
             AuthorizationDeniedException.class ,
+            WorkspaceAccessDeniedException.class ,
     })
     public ResponseEntity<ErrorResponse> handleForbidden(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.FORBIDDEN , exception , request) ;
@@ -72,6 +74,8 @@ public class GlobalExceptionHandler {
             RefreshTokenNotFoundException.class ,
             UserNotFoundException.class ,
             UrlNotFoundException.class ,
+            MemberNotFoundException.class,
+            WorkspaceNotFoundException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFound(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.NOT_FOUND, exception , request) ;
@@ -84,6 +88,9 @@ public class GlobalExceptionHandler {
             RedisOperationException.class ,
             ExternalAuthenticationException.class ,
             SlugAlreadyTakenException.class ,
+            DomainAlreadyExistsException.class ,
+            WorkspaceMemberAlreadyExistsException.class ,
+            MemberVerificationNotPendingException.class
     })
     public ResponseEntity<ErrorResponse> handleConflict(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.CONFLICT , exception , request) ;
@@ -157,6 +164,9 @@ public class GlobalExceptionHandler {
     }
 
     //General exceptions
+    @ExceptionHandler({
+            DateTimeParseException.class
+    })
     public ResponseEntity<ErrorResponse> handleDateTimeParseException(Exception ex , WebRequest request) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
@@ -172,6 +182,7 @@ public class GlobalExceptionHandler {
     //----- Common Method to build ErrorResponse
     private ResponseEntity<ErrorResponse> buildResponse (HttpStatus status , Exception exception , WebRequest request) {
         ErrorResponse response = ErrorResponse.builder()
+                .success(false)
                 .timestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .message(exception.getMessage())
                 .error(status.getReasonPhrase())

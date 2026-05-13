@@ -31,4 +31,18 @@ public record PaginatedResponse <T>(
                 page.hasPrevious()
         );
     }
+
+    public static <T> PaginatedResponse <T> fromEntity(List<T> content , Page<T> page) {
+        return new PaginatedResponse<>(
+                content ,
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                page.isFirst(),
+                page.isLast(),
+                page.hasNext(),
+                page.hasPrevious()
+        );
+    }
 }

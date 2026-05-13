@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        body { margin: 0; padding: 0; background-color: #f4f4f5; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table { border-spacing: 0; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { border: 0; line-height: 100%; outline: none; text-decoration: none; }
+
+        .wrapper { width: 100%; background-color: #f4f4f5; padding: 40px 0; }
+        .email-card { width: 100%; max-width: 520px; background-color: #0a0a0a; border-radius: 20px; overflow: hidden; }
+
+        .title { color: #ffffff; font-family: 'Inter', Arial, sans-serif; font-size: 26px; font-weight: 700; margin: 0; letter-spacing: -0.5px; }
+        .workspace-name { color: #8b5cf6; font-family: 'Inter', Arial, sans-serif; font-size: 20px; font-weight: 700; margin: 8px 0 0 0; }
+
+        .btn-action {
+            background-color: #8b5cf6;
+            color: #ffffff !important;
+            padding: 16px 36px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-family: 'Inter', Arial, sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+            display: inline-block;
+        }
+
+        /* Mobile Fixes */
+        @media screen and (max-width: 520px) {
+            .email-card { border-radius: 0 !important; }
+            .content { padding: 25px !important; }
+        }
+    </style>
+</head>
+<body style="margin:0; padding:0;">
+<center class="wrapper">
+    <table class="email-card" align="center" cellpadding="0" cellspacing="0" role="presentation">
+        <tr>
+            <td align="center" style="background: #111111; padding: 45px 40px 25px 40px; border-bottom: 1px solid #1a1a1a;">
+                <table cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td align="center" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 16px; padding: 14px;">
+                            <img th:src="${logoUrl}" src="https://img.icons8.com/fluency-systems-filled/48/8b5cf6/briefcase.png" width="28" height="28" alt="Workspace">
+                        </td>
+                    </tr>
+                </table>
+                <h1 class="title">Workspace Invitation</h1>
+                <p class="workspace-name" th:text="${workspaceName}">Engineering Team</p>
+            </td>
+        </tr>
+
+        <tr>
+            <td class="content" style="padding: 40px; text-align: center; font-family: 'Inter', Arial, sans-serif;">
+                <p style="color: #ffffff; font-size: 15px; margin: 0 0 8px 0;">
+                    Hello <span style="font-weight: 600;" th:text="${userName}">User</span>,
+                </p>
+                <p style="color: #a1a1aa; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
+                    You've been invited to collaborate on<br>
+                    <span style="color: #ffffff; font-weight: 600;" th:text="${workspaceName}">Workspace</span>
+                </p>
+
+                <table align="center" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+                    <tr>
+                        <td style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2); color: #c4b5fd; padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-transform: uppercase;">
+                            <span th:text="${role}">EDITOR</span>
+                        </td>
+                    </tr>
+                </table>
+
+                <table width="100%" cellpadding="0" cellspacing="0" style="background: #111111; border: 1px solid #222222; border-radius: 12px; padding: 20px; margin-bottom: 32px; text-align: left;">
+                    <tr>
+                        <td style="font-size: 10px; color: #52525b; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 12px;">
+                            Workspace Details
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 13px; color: #71717a; padding-bottom: 8px;">
+                            <img src="https://img.icons8.com/fluency-systems-filled/14/8b5cf6/user.png" width="14" style="vertical-align: middle;">
+                            Inviter: <span style="color: #ffffff; font-weight: 600;" th:text="${invitedByName}">John Doe</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 13px; color: #71717a;">
+                            <img src="https://img.icons8.com/fluency-systems-filled/14/8b5cf6/calendar.png" width="14" style="vertical-align: middle;">
+                            Date: <span style="color: #ffffff; font-weight: 600;" th:text="${invitedAt}">May 12, 2026</span>
+                        </td>
+                    </tr>
+                </table>
+
+                <table align="center" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td align="center" style="border-radius: 10px;" bgcolor="#8b5cf6">
+                            <a th:href="${invitationLink}" class="btn-action" target="_blank">
+                                Accept Invitation
+                            </a>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="padding: 0 40px 40px 40px; text-align: center; font-family: 'Inter', Arial, sans-serif; border-top: 1px solid #1a1a1a; padding-top: 25px;">
+                <p style="font-size: 12px; color: #52525b; margin: 0 0 10px 0;">If the button doesn't work, use this link:</p>
+                <a th:href="${invitationLink}" style="color: #8b5cf6; font-size: 11px; word-break: break-all; text-decoration: none;" th:text="${invitationLink}">https://snapurl.dishari.in/join</a>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="background-color: #000000; padding: 30px 40px; text-align: center; border-top: 1px solid #1a1a1a;">
+                <p style="font-family: 'Inter', Arial, sans-serif; font-size: 11px; color: #3f3f46; line-height: 1.6; margin: 0;">
+                    Sent to <span style="color: #71717a;" th:text="${userEmail}">user@example.com</span><br>
+                    Powered by <span style="color: #8b5cf6; font-weight: 700;">Dishari Workspaces</span>
+                </p>
+            </td>
+        </tr>
+    </table>
+</center>
+</body>
+</html>
