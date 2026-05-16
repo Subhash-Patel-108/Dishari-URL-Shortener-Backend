@@ -19,6 +19,7 @@ import com.dishari.in.web.dto.request.UpdateWorkspaceRequest;
 import com.dishari.in.web.dto.response.*;
 import com.dishari.in.web.mapper.WorkspaceMapper;
 
+import com.dishari.in.web.projection.WorkspaceSummaryProjection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -31,7 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor

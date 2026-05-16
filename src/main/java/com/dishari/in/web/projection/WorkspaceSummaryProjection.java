@@ -1,4 +1,4 @@
-package com.dishari.in.web.dto.response;
+package com.dishari.in.web.projection;
 
 import com.dishari.in.domain.enums.Plan;
 import com.dishari.in.domain.enums.WorkspaceMemberRole;

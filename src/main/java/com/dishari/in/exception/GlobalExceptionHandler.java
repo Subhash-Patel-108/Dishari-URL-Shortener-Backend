@@ -43,7 +43,7 @@ public class GlobalExceptionHandler {
             EmailNotVerifiedException.class,
             LockedException.class,
             UnauthorizedException.class ,
-            UserNotOwnException.class
+            UserNotOwnException.class ,
     })
     public ResponseEntity<ErrorResponse> handleUnauthorized(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.UNAUTHORIZED , exception , request) ;
@@ -63,6 +63,7 @@ public class GlobalExceptionHandler {
             AccessDeniedException.class ,
             AuthorizationDeniedException.class ,
             WorkspaceAccessDeniedException.class ,
+            BioLinkNotFoundException.class ,
     })
     public ResponseEntity<ErrorResponse> handleForbidden(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.FORBIDDEN , exception , request) ;
@@ -75,7 +76,8 @@ public class GlobalExceptionHandler {
             UserNotFoundException.class ,
             UrlNotFoundException.class ,
             MemberNotFoundException.class,
-            WorkspaceNotFoundException.class
+            WorkspaceNotFoundException.class ,
+            BioPageNotFoundException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFound(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.NOT_FOUND, exception , request) ;
@@ -90,7 +92,10 @@ public class GlobalExceptionHandler {
             SlugAlreadyTakenException.class ,
             DomainAlreadyExistsException.class ,
             WorkspaceMemberAlreadyExistsException.class ,
-            MemberVerificationNotPendingException.class
+            MemberVerificationNotPendingException.class ,
+            BioPageAlreadyExistException.class ,
+            BioPageHandleTakenException.class ,
+
     })
     public ResponseEntity<ErrorResponse> handleConflict(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.CONFLICT , exception , request) ;
@@ -139,7 +144,8 @@ public class GlobalExceptionHandler {
 
     //---------Too Many Request : 429
     @ExceptionHandler({
-            TooManyRequestException.class
+            TooManyRequestException.class ,
+            BioPageLimitException.class
     })
     public ResponseEntity<ErrorResponse> handleTooManyRequest(Exception exception , WebRequest request) {
         return buildResponse(HttpStatus.TOO_MANY_REQUESTS , exception , request) ;

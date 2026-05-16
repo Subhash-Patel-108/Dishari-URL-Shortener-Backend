@@ -1,7 +1,7 @@
 package com.dishari.in.domain.repository;
 
 import com.dishari.in.domain.entity.Workspace;
-import com.dishari.in.web.dto.response.WorkspaceSummaryProjection;
+import com.dishari.in.web.projection.WorkspaceSummaryProjection;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

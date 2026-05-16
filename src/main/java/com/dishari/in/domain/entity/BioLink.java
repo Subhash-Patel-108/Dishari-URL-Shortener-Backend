@@ -32,7 +32,7 @@ public class BioLink extends BaseEntity {
     @Column(name = "url" , nullable = false , length = 2048)
     private String url ;
 
-    @Column(name = "icon_type" , nullable = false , length = 50)
+    @Column(name = "icon_type" , length = 50)
     private String iconType ;
 
     @Column(name = "position" , nullable = false)
@@ -52,6 +52,5 @@ public class BioLink extends BaseEntity {
     @Version
     private Long version ;
 
-    @SoftDelete(strategy = SoftDeleteType.TIMESTAMP)
     private Instant deletedAt ;
 }

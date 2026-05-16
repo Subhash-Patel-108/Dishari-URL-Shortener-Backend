@@ -7,6 +7,8 @@ import org.hibernate.annotations.SoftDelete;
 import org.hibernate.annotations.SoftDeleteType;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -16,12 +18,12 @@ import java.time.Instant;
 @SuperBuilder
 
 @Table(name = "bio_pages" , indexes = {
-        @Index(name = "bio_page_handle_idx" , columnList = "handle" , unique = true) ,
+        @Index(name = "bio_page_handle_idx" , columnList = "handle" ) ,
         @Index(name = "bio_page_user_id_idx" , columnList = "user_id")
 })
 public class BioPage extends BaseEntity {
 
-    @Column(name = "handle" , nullable = false , unique = true , length = 32)
+    @Column(name = "handle" , nullable = false , length = 32)
     private String handle ;//a unique identifier
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -48,6 +50,14 @@ public class BioPage extends BaseEntity {
     @Version
     private Long version ;
 
-    @SoftDelete(strategy = SoftDeleteType.TIMESTAMP)
     private Instant deletedAt ;
+
+    // Back-reference to links
+    @OneToMany(mappedBy = "bioPage",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY)
+    @OrderBy("position ASC")
+    @Builder.Default
+    private List<BioLink> links = new ArrayList<>();
 }
